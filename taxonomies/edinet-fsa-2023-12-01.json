@@ -1,0 +1,18 @@
+{
+  "identifier": "edinet-fsa-2023-12-01",
+  "version": "2024",
+  "edition": "2024年版EDINETタクソノミ (published 2023-12-11, dated 2023-12-01)",
+  "source_url": "https://www.fsa.go.jp/search/20231211/1c_Taxonomy.zip",
+  "downloaded_at": "2026-07-12T08:30:43Z",
+  "file_size": 5946316,
+  "raw_sha256": "75b307274f80e05b4ee4d2f6193dfde7b7bc91c4858d4b0afea41343814f9af9",
+  "content_sha256": "e0a678b1e0bf4e17550761df7140bce3ce8159f70794f6c845031d886085884b",
+  "content_hash_algorithm": "entry-path-and-content-sha256-v1",
+  "is_taxonomy_package": false,
+  "required_for": [
+    "jpcrp-2023-12-01",
+    "jpigp-2023-12-01",
+    "jppfs-2023-12-01",
+    "jpdei-2013-08-31"
+  ]
+}
