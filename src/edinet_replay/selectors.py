@@ -3,28 +3,41 @@
 Kept in a separate namespace from :mod:`edinet_replay.catalog`'s mechanical
 filters. "The latest annual report" is ambiguous once correction filings,
 resubmissions, and same-day multiple filings exist, so each strategy is named and
-versioned and records the full candidate set it saw.
-
-Interface stub (pre-alpha).
+versioned, has no hidden criteria, and records the full candidate set it saw.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .exceptions import NoCandidatesError
 from .models import DocumentMetadata, SelectionRecord
 
 SELECTOR_VERSION = "1.0.0"
 
 
 def latest_original_filing(
-    candidates: list[DocumentMetadata],
+    candidates: Sequence[DocumentMetadata],
     *,
     parameters: Mapping[str, Any] | None = None,
 ) -> SelectionRecord:
-    """Choose the latest *original* (non-amendment) filing from ``candidates``.
+    """Choose the latest *original* (non-amendment) filing.
 
-    Returns a :class:`SelectionRecord` recording the strategy, its version, the
-    chosen ``document_id``, and every candidate id considered.
+    Amendments are excluded. The latest is by ``submit_datetime``, with ties
+    broken deterministically by ``document_id``. Raises
+    :class:`~edinet_replay.exceptions.NoCandidatesError` if no original filing
+    remains. The returned record keeps the full candidate id set (sorted), the
+    selector name/version, and the parameters.
     """
-    raise NotImplementedError
+    all_ids = sorted(doc.document_id for doc in candidates)
+    originals = [doc for doc in candidates if not doc.is_amendment]
+    if not originals:
+        raise NoCandidatesError("no original (non-amendment) filing among candidates")
+    chosen = max(originals, key=lambda d: (d.submit_datetime or "", d.document_id))
+    return SelectionRecord(
+        selected_by="latest_original_filing",
+        selector_version=SELECTOR_VERSION,
+        selected_document_id=chosen.document_id,
+        candidate_document_ids=all_ids,
+        parameters=dict(parameters or {}),
+    )

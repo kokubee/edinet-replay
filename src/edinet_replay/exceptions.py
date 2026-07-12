@@ -38,6 +38,18 @@ class TaxonomyResolutionError(EdinetReplayError):
     """A taxonomy package could not be pinned, verified, or resolved offline."""
 
 
+class TaxonomyConflictError(TaxonomyResolutionError):
+    """The same taxonomy identifier/version was re-registered with different content."""
+
+
+class SelectionError(EdinetReplayError):
+    """Document selection failed."""
+
+
+class NoCandidatesError(SelectionError):
+    """No document satisfied the selection criteria."""
+
+
 class ExtractionError(EdinetReplayError):
     """Faithful extraction failed."""
 

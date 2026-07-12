@@ -24,6 +24,7 @@ class DocumentMetadata:
     period_start: str | None = None
     period_end: str | None = None
     submit_datetime: str | None = None
+    is_amendment: bool = False
 
 
 @dataclass(frozen=True)
