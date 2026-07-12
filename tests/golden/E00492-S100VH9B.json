@@ -1,0 +1,20 @@
+{
+  "accounting_standard": "IFRS",
+  "edinet_code": "E00492",
+  "document_id": "S100VH9B",
+  "source_raw_sha256": "881181f95ae8f08b8224ab650d55bb9bda85c24608141ed358232000b4464c6d",
+  "source_content_sha256": "368fb4e322f5e54a6ed26b166340579ce33a9d935085aeb459c0c2a78a5756e2",
+  "taxonomy_raw_sha256": "75b307274f80e05b4ee4d2f6193dfde7b7bc91c4858d4b0afea41343814f9af9",
+  "taxonomy_content_sha256": "e0a678b1e0bf4e17550761df7140bce3ce8159f70794f6c845031d886085884b",
+  "arelle_version": "2.42.0",
+  "extractor_version": "0.1.0",
+  "manifest_schema_version": "1.0.0",
+  "filing_schema_version": "1.0.0",
+  "canonicalization_profile": "edinet-replay-canonical-json-v1",
+  "fact_count": 2207,
+  "context_count": 256,
+  "unit_count": 5,
+  "footnote_relationship_count": 44,
+  "canonical_output_sha256": "6aa43be78b6953489b80c654175571a584a5c7e29a0b9ab25d9b22102f00a152",
+  "canonical_output_size_bytes": 8032520
+}
