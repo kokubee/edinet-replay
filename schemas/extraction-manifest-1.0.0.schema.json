@@ -251,6 +251,33 @@
       "additionalProperties": true,
       "examples": [{ "jp.example.tool": { "cache_backend": "filesystem" } }]
     },
+    "extraction_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "package_path"],
+      "description": "Which document within the package the facts were projected from. 'xbrl-instance' = the resolved XBRL instance (no iXBRL presentation layer); 'ixds' = the inline document set.",
+      "properties": {
+        "kind": { "type": "string", "enum": ["xbrl-instance", "ixds"] },
+        "package_path": { "type": "string" },
+        "selected_from_manifest": { "type": "boolean" },
+        "preferred_filename": { "type": "boolean" },
+        "ixbrl_crosscheck": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Evidence that the chosen instance carries the same fact set as the inline document set.",
+          "properties": {
+            "ixbrl_document_count": { "type": "integer", "minimum": 0 },
+            "xbrl_fact_count": { "type": "integer", "minimum": 0 },
+            "ixbrl_fact_count": { "type": "integer", "minimum": 0 },
+            "counts_match": { "type": "boolean" },
+            "structural_signatures_match": {
+              "type": "boolean",
+              "description": "Multiset of (concept, contextRef, unitRef, nil) matches between the instance and the inline document set — i.e. the same fact set referencing the same contexts/units. Value-level equality is not asserted here: textBlock HTML is serialized differently in the .xbrl vs inline forms, so exact value comparison is deferred to the IXDS extraction where both sides resolve consistently."
+            }
+          }
+        }
+      }
+    },
     "generated_at": {
       "type": "string",
       "format": "date-time",

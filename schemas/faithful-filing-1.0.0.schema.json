@@ -42,9 +42,20 @@
         }
       }
     },
+    "provenance_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resolved_xbrl", "ixbrl_lexical", "ixbrl_presentation"],
+      "description": "Which provenance layers THIS extraction populated. resolved_xbrl facts come from the XBRL instance; the ixbrl_* layers require an IXDS extraction and are false in xbrl-instance mode. When a layer is false, its per-fact fields (numeric_provenance / text_provenance) are OMITTED (absent), never null, so 'not extracted' is distinguishable from 'confirmed empty'.",
+      "properties": {
+        "resolved_xbrl": { "type": "boolean" },
+        "ixbrl_lexical": { "type": "boolean" },
+        "ixbrl_presentation": { "type": "boolean" }
+      }
+    },
     "facts": {
       "type": "object",
-      "description": "Map of fact id -> fact. The key IS the fact id (OIM style).",
+      "description": "Map of source_fact_id -> fact. The key IS the fact's source identity (OIM style); it encodes source position, not resolved aspects.",
       "propertyNames": { "pattern": "^[A-Za-z0-9_][A-Za-z0-9._:-]*$" },
       "additionalProperties": { "$ref": "#/$defs/fact" }
     },
