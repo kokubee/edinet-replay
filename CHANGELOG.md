@@ -33,8 +33,9 @@ inline (iXBRL) presentation layer are not yet implemented.
 - Live EDINET API v2 client: `EdinetClient.list_documents()` /
   `EdinetClient.download_document()`. Authenticates via the
   `Ocp-Apim-Subscription-Key` header (the key never appears in URLs, logs, or
-  exception messages), translates EDINET's body-level statuses — the API
-  answers HTTP 200 even for errors — into a typed hierarchy
+  exception messages), translates EDINET's body-level statuses — observed
+  API-level errors may arrive as HTTP 200 with the effective status in the
+  body — into a typed hierarchy
   (`EdinetAuthenticationError` for body `StatusCode` 401,
   `DocumentNotFoundError` for body 404, `EdinetResponseError` for unexpected
   payloads), validates content types, distinguishes ZIP payloads from JSON

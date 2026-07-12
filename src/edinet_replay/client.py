@@ -8,17 +8,18 @@ live API), and therefore never appears in any URL. It is also never written
 into outputs, logs, or exception messages; exception messages never embed full
 request URLs.
 
-EDINET-specific status handling (verified against the live API, 2026-07-12):
-the API returns **HTTP 200 for every error** and reports the real status in
-the body —
+EDINET-specific status handling (observed against the live API, 2026-07-12):
+EDINET API-level errors may be returned as **HTTP 200** with the effective
+status reported in the response body —
 
 - list success: ``{"metadata": {"status": "200", ...}, "results": [...]}``
 - invalid/missing key (both endpoints): ``{"StatusCode": 401, "message": ...}``
 - unknown docID / bad parameters: ``{"metadata": {"status": "404"|"400", ...}}``
 - download success: ``application/octet-stream`` ZIP bytes
 
-Retries are limited to real HTTP 429/5xx transport failures; body-level errors
-and other HTTP 4xx are never retried.
+Transport-level HTTP errors are handled separately: retries are limited to
+real HTTP 429/5xx failures; body-level errors and other HTTP 4xx are never
+retried.
 """
 from __future__ import annotations
 
@@ -106,7 +107,12 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _document_from_result(item: Mapping[str, object]) -> DocumentMetadata:
+def _document_from_result(item: object) -> DocumentMetadata:
+    if not isinstance(item, Mapping):
+        raise EdinetResponseError(
+            f"EDINET document list entry is not an object (got {type(item).__name__})"
+        )
+
     def _s(key: str) -> str | None:
         value = item.get(key)
         return str(value) if value is not None else None
@@ -169,16 +175,22 @@ class EdinetClient:
             raise EdinetResponseError(
                 f"EDINET document list for {date} has no results array"
             )
-        metadata = payload.get("metadata") or {}
-        resultset = metadata.get("resultset") or {}
-        count = resultset.get("count")
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            raise EdinetResponseError(
+                f"EDINET document list for {date} has a malformed metadata object "
+                f"(got {type(metadata).__name__})"
+            )
+        resultset = metadata.get("resultset")
+        count = resultset.get("count") if isinstance(resultset, Mapping) else None
+        process_datetime = metadata.get("processDateTime")
         return DocumentListResult(
             date=date,
             documents=[_document_from_result(item) for item in results],
             retrieved_at=_utc_now_iso(),
             api_version=API_VERSION,
-            result_count=int(count) if isinstance(count, int) else None,
-            process_datetime=metadata.get("processDateTime"),
+            result_count=count if isinstance(count, int) else None,
+            process_datetime=str(process_datetime) if process_datetime is not None else None,
         )
 
     def download_document(self, document_id: str) -> DocumentDownload:
@@ -285,14 +297,21 @@ class EdinetClient:
     def _raise_for_body_error(
         payload: Mapping[str, object], *, context: str, document_id: str | None = None
     ) -> None:
-        """Translate EDINET's body-level statuses (HTTP is 200 either way)."""
-        # Subscription-key rejection: {"StatusCode": 401, "message": ...}
-        if payload.get("StatusCode") == 401:
-            raise EdinetAuthenticationError(
-                f"EDINET rejected the subscription key for {context}"
+        """Translate EDINET's body-level statuses (delivered inside an HTTP 200)."""
+        # Subscription-key rejection: {"StatusCode": 401, "message": ...}. Accept a
+        # string "401" too, and treat any other top-level StatusCode as a body-level
+        # error rather than letting it fall through to a shape error downstream.
+        status_code = payload.get("StatusCode")
+        if status_code is not None:
+            if str(status_code) == "401":
+                raise EdinetAuthenticationError(
+                    f"EDINET rejected the subscription key for {context}"
+                )
+            raise EdinetResponseError(
+                f"EDINET reported StatusCode {status_code} for {context}"
             )
         metadata = payload.get("metadata")
-        if isinstance(metadata, dict):
+        if isinstance(metadata, Mapping):
             status = str(metadata.get("status", ""))
             if status == "404" and document_id is not None:
                 raise DocumentNotFoundError(

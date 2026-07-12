@@ -2,8 +2,8 @@
 
 The fixtures under ``tests/fixtures/edinet_api/`` are sanitized captures of real
 EDINET v2 responses (public disclosure data; no subscription key). The central
-EDINET quirk under test: **every error comes back as HTTP 200**, with the real
-status in the body.
+EDINET quirk under test: observed API-level errors may come back as HTTP 200,
+with the effective status in the body (transport-level 429/5xx are separate).
 """
 from __future__ import annotations
 
@@ -169,6 +169,44 @@ def test_missing_results_array_is_response_error():
     body = json.dumps({"metadata": {"status": "200"}}).encode()
     client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
     with pytest.raises(EdinetResponseError, match="no results array"):
+        client.list_documents("2025-06-27")
+
+
+@pytest.mark.parametrize("bad_metadata", ["broken", ["broken"], 200])
+def test_malformed_metadata_is_response_error_not_attribute_error(bad_metadata):
+    body = json.dumps({"metadata": bad_metadata, "results": []}).encode()
+    client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
+    with pytest.raises(EdinetResponseError, match="malformed metadata"):
+        client.list_documents("2025-06-27")
+
+
+@pytest.mark.parametrize("bad_entry", ["broken", None, ["broken"], 42])
+def test_non_object_result_entry_is_response_error_not_attribute_error(bad_entry):
+    body = json.dumps({"metadata": {"status": "200"}, "results": [bad_entry]}).encode()
+    client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
+    with pytest.raises(EdinetResponseError, match="not an object"):
+        client.list_documents("2025-06-27")
+
+
+def test_malformed_resultset_is_tolerated_without_count():
+    body = json.dumps(
+        {"metadata": {"status": "200", "resultset": "broken"}, "results": []}
+    ).encode()
+    client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
+    assert client.list_documents("2025-06-27").result_count is None
+
+
+def test_string_status_code_401_is_authentication_error():
+    body = json.dumps({"StatusCode": "401", "message": "denied"}).encode()
+    client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
+    with pytest.raises(EdinetAuthenticationError):
+        client.list_documents("2025-06-27")
+
+
+def test_non_401_top_level_status_code_is_response_error():
+    body = json.dumps({"StatusCode": 500, "message": "internal"}).encode()
+    client, _ = _client([HttpResponse(200, JSON_HEADERS, body)])
+    with pytest.raises(EdinetResponseError, match="StatusCode 500"):
         client.list_documents("2025-06-27")
 
 

@@ -49,10 +49,12 @@ download = client.download_document(originals[0].document_id)
 # listing/download carry retrieved_at and api_version for the manifest.
 ```
 
-The client translates EDINET's body-level statuses (the API answers HTTP 200
-even for errors): an invalid subscription key raises
-`EdinetAuthenticationError`, an unknown docID raises `DocumentNotFoundError`,
-and real HTTP 429/5xx failures are retried before raising
+The client translates EDINET's body-level statuses — observed EDINET
+API-level errors may be returned as HTTP 200 with the effective status in the
+response body: an invalid subscription key raises
+`EdinetAuthenticationError`, and an unknown docID raises
+`DocumentNotFoundError`. Transport-level HTTP errors are handled separately:
+real HTTP 429/5xx failures are retried before raising
 `EdinetRateLimitError`/`EdinetTransportError`. The API key never appears in
 URLs, logs, or exception messages.
 
