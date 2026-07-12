@@ -75,8 +75,11 @@ current maintenance scope" is a sufficient reason.
    update, and a migration note.
 8. Can this realistically be maintained going forward?
 
-Merges are squash-only; `main` is protected (CI required, owner approval, no
-force-push).
+Merges are squash-only; `main` is protected: CI (pytest + ruff) required,
+conversation resolution required, force-push and deletion blocked. Approvals are
+**not** required while there is a single maintainer — external PRs are reviewed by
+the maintainer before merge as a matter of practice, not gated by required
+approvals. (When a co-maintainer joins: require 1 approval + Code Owner review.)
 
 ## AI-assisted contributions
 
