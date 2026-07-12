@@ -1,8 +1,8 @@
 """Content hashing — the pinned ``entry-path-and-content-sha256-v1`` algorithm.
 
-This is the one fully-specified, dependency-free part of the project, so it is
+The one fully-specified, dependency-free part of the project, so it is
 implemented (not stubbed). It produces the ``content_sha256`` used in both the
-extraction manifest's ``source_package`` and ``taxonomy_package``: a normalized,
+manifest's ``source_package`` and ``taxonomy_package``: a normalized,
 compression-independent hash of an archive's logical contents. See
 ``docs/content-hash-v1.md``.
 """

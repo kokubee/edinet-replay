@@ -1,8 +1,9 @@
 """EDINET Replay — reproducible, provenance-preserving extraction for EDINET filings.
 
-Pre-alpha. Only :mod:`edinet_replay.hashing` is implemented; the retrieval,
-package, taxonomy, selection, and extraction modules are interface stubs whose
-bodies raise :class:`NotImplementedError`.
+Pre-alpha. The content-hash algorithm and schema validation are implemented;
+retrieval, package handling, taxonomy resolution, selection, and Arelle-based
+extraction are interface stubs whose bodies raise ``NotImplementedError`` (or a
+dedicated :mod:`edinet_replay.exceptions` error).
 """
 from __future__ import annotations
 

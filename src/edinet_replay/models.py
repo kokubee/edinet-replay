@@ -1,16 +1,19 @@
-"""Typed domain objects passed between the Layer 1 modules.
+"""Typed domain objects exchanged between the Layer 1 modules.
 
-These describe the *shapes* the interfaces exchange. The on-disk manifest and
-faithful-filing artifacts are JSON validated against ``schemas/``; these
-dataclasses are the in-process representations.
+Only boundary types are hand-written as dataclasses. The manifest and
+faithful-filing *documents* stay as validated mappings rather than hand-mirrored
+dataclasses, so the Python types cannot silently drift from the JSON Schemas
+(schema validation is mandatory; typed generation can come later).
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True)
-class DocumentRef:
+class DocumentMetadata:
     """One EDINET document as seen in the daily document list."""
 
     document_id: str
@@ -24,14 +27,25 @@ class DocumentRef:
 
 
 @dataclass(frozen=True)
-class SelectionResult:
+class DocumentQuery:
+    """Mechanical filter criteria; recorded verbatim in ``selection.parameters``."""
+
+    edinet_code: str | None = None
+    document_type: str | None = None
+    include_amendments: bool = False
+    date_from: str | None = None
+    date_to: str | None = None
+
+
+@dataclass(frozen=True)
+class SelectionRecord:
     """The explicit outcome of choosing one document from a candidate set."""
 
     selected_by: str
     selector_version: str
     selected_document_id: str
     candidate_document_ids: list[str]
-    parameters: dict = field(default_factory=dict)
+    parameters: Mapping[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -42,7 +56,7 @@ class PackageEntry:
 
 
 @dataclass(frozen=True)
-class StoredPackage:
+class SourcePackage:
     """A downloaded submission ZIP, stored with dual hashes and an inventory."""
 
     document_id: str
@@ -56,7 +70,7 @@ class StoredPackage:
 
 
 @dataclass(frozen=True)
-class TaxonomyRef:
+class TaxonomyPackage:
     """A pinned, locally vendored taxonomy package for offline DTS resolution."""
 
     identifier: str
@@ -64,3 +78,15 @@ class TaxonomyRef:
     raw_sha256: str
     content_sha256: str
     version: str | None = None
+
+
+@dataclass(frozen=True)
+class ExtractionConfiguration:
+    """Output-affecting extraction settings (part of extraction identity)."""
+
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+
+# Boundary-heavy documents stay as validated mappings, not hand-mirrored dataclasses.
+FaithfulFiling = Mapping[str, Any]
+ExtractionManifest = Mapping[str, Any]

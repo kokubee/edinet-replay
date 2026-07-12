@@ -19,13 +19,12 @@ classifiers = [
   "Topic :: Office/Business :: Financial",
 ]
 dependencies = [
-  "requests>=2.31",
-  "jsonschema>=4.0",
+  "jsonschema>=4.23",
 ]
 
 [project.optional-dependencies]
-arelle = ["arelle-release>=2.36"]
-dev = ["pytest>=8.0"]
+xbrl = ["arelle-release>=2.36"]
+dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.urls]
 Homepage = "https://github.com/kokubee/edinet-replay"
@@ -35,4 +34,18 @@ Repository = "https://github.com/kokubee/edinet-replay"
 edinet-replay = "edinet_replay.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["edinet_replay"]
+packages = ["src/edinet_replay"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"schemas" = "edinet_replay/schemas"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
