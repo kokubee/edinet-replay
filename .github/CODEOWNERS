@@ -1,0 +1,9 @@
+# Default owner for everything.
+* @kokubee
+
+# Keep infrastructure, the public contracts, and the determinism-critical code
+# under explicit ownership so they cannot be weakened by a PR.
+/.github/ @kokubee
+/schemas/ @kokubee
+/src/edinet_replay/extract.py @kokubee
+/src/edinet_replay/canonical.py @kokubee

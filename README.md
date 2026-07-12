@@ -78,6 +78,14 @@ XBRL / Inline XBRL semantics are intended to be resolved by [Arelle](https://are
 - [Working with Japanese market data](docs/japanese-market-data.md)
 - 日本語: [README.ja.md](README.ja.md)
 
+## Maintenance
+
+EDINET Replay is a pre-alpha project maintained on a best-effort basis. There is
+no guaranteed response time for issues or pull requests, and opening one does not
+guarantee a change will be accepted. Please discuss large changes in an issue
+first, and report security vulnerabilities privately (see [SECURITY.md](SECURITY.md)),
+not in public issues. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).

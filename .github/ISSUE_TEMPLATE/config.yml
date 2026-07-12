@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability (private)
+    url: https://github.com/kokubee/edinet-replay/security/advisories/new
+    about: Report vulnerabilities privately — please do NOT open a public issue.
