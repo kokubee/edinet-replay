@@ -1,12 +1,14 @@
 # EDINET Replay
 
-A reproducible, provenance-preserving extraction toolkit for Japan's EDINET corporate filings.
+Toward reproducible, verifiable access to Japan's EDINET corporate disclosures — currently at the schema-and-specification stage.
 
-EDINET Replay downloads official filing packages from Japan's Financial Services Agency (FSA), preserves the original source artifacts, resolves XBRL and Inline XBRL through [Arelle](https://arelle.org/), and exports a faithful, machine-readable representation with traceable links back to the source filing.
+EDINET Replay is an open-source project for developing a reproducible, provenance-preserving extraction workflow for Japan's EDINET corporate filings.
+
+It defines versioned schemas and reproducibility contracts for preserving official filing packages, resolving XBRL and Inline XBRL through [Arelle](https://arelle.org/), and producing machine-readable representations that remain traceable to their source filings.
 
 The project is designed for **data engineers, quantitative researchers, XBRL implementers, ESG data users, academic researchers, financial data providers, and the data teams of institutional investors** who need verifiable access to Japanese corporate disclosures. General retail investors are unlikely to use it directly.
 
-> **Status: early.** The output *contracts* are defined first — as versioned JSON Schemas in [`schemas/`](schemas/) — before the extractor is built. See [docs/reproducibility.md](docs/reproducibility.md).
+> **Project status: pre-alpha.** EDINET Replay currently provides versioned JSON Schemas, reproducibility specifications, and validation fixtures. The extraction client and Arelle-based implementation are under development and are not production-ready.
 
 ## What is EDINET?
 
@@ -21,28 +23,40 @@ EDINET filings are publicly available, but reproducible use remains difficult be
 - extracted values may lose context, units, dimensions, or source provenance;
 - normalized financial databases often do not disclose how original facts were transformed.
 
-EDINET Replay focuses on **faithful reproduction rather than financial interpretation.** It preserves the source facts first. Mapping, normalization, comparability assessment, and investment analysis belong in separate downstream layers.
+EDINET Replay focuses on **faithful reproduction rather than financial interpretation.** It aims to preserve the source facts first. Mapping, normalization, comparability assessment, and investment analysis belong in separate downstream layers.
 
-## What it does
+## What is available today
 
-- Retrieve filing packages from EDINET without operating the Japanese-language site
-- Preserve the raw package (byte-exact) and record both its raw and normalized-content hashes
-- Resolve XBRL / Inline XBRL through Arelle — without reimplementing XBRL semantics
-- Export faithful facts with contexts, units, dimensions, decimals/precision, nil, and footnotes intact
-- Keep a traceable reference from every fact back to its source element in the package
-- Handle JP GAAP, IFRS, and US GAAP filings through the same retrieval base
-- Make each extraction reproducible: the same pinned inputs produce the same output
+- Versioned JSON Schemas for extraction manifests and faithful filing representations
+- Specifications for package content hashing and canonical JSON serialization
+- Validation fixtures covering numeric, textual, dimensional, nil, unit, and footnote structures
+- Schema and semantic validation tests
+- Documentation of the intended provenance and reproducibility model
 
-## What it does NOT do
+## Planned scope
 
-This boundary is intentional:
+EDINET Replay is intended to:
 
-- It does **not** automatically merge different tags into one "same" concept
-- It does **not** normalize or assert the economic meaning of data
-- It does **not** provide investment advice
-- It is **not** an official product of EDINET or the FSA
+- retrieve official filing packages through the EDINET API without requiring use of the Japanese-language website;
+- preserve the byte-exact source package together with raw-package and normalized-content hashes;
+- resolve XBRL and Inline XBRL using Arelle rather than reimplementing XBRL semantics;
+- export faithful fact representations that retain contexts, units, dimensions, accuracy attributes, nil values, footnotes, and source provenance;
+- provide traceable references from extracted facts to elements in the original filing package; and
+- support reproducible extraction from explicitly selected and version-pinned inputs.
 
-> This project is not affiliated with or endorsed by Japan's Financial Services Agency.
+The retrieval and faithful-representation layers are designed not to depend on a specific accounting standard. Support claims for particular JP GAAP, IFRS, or U.S. GAAP filing patterns will be documented only after they are covered by conformance fixtures and regression tests.
+
+## What this project does not do
+
+EDINET Replay does not:
+
+- merge different XBRL concepts into a presumed common economic concept;
+- normalize, correct, or assert the economic meaning of reported facts;
+- guarantee comparability across companies, periods, or accounting standards;
+- provide investment recommendations or investment advice; or
+- represent an official EDINET or Financial Services Agency product.
+
+> EDINET Replay is an independent open-source project. It is not affiliated with, sponsored by, or endorsed by Japan's Financial Services Agency.
 
 ## Design
 
@@ -51,11 +65,11 @@ Two layers, deliberately separated:
 - **Layer 1 — faithful reproduction (this project, OSS):** retrieval, package handling, provenance, and OIM-compatible faithful facts.
 - **Layer 2 — interpretation (out of scope here):** concept mapping, normalization, comparability / computability assessment. These carry research judgment and belong in separate, downstream layers.
 
-Reproduction identity is fixed by: source content hash + taxonomy package hash + Arelle version + extractor version + schema version + an explicit document-selection record. See [architecture](docs/architecture.md) · [reproducibility](docs/reproducibility.md) · [schema](docs/schema.md).
+The project defines the inputs and canonicalization rules required to test whether an extraction can be reproduced: source content hash + taxonomy package hash + Arelle version + extractor version + schema version + an explicit document-selection record. See [architecture](docs/architecture.md) · [reproducibility](docs/reproducibility.md) · [schema](docs/schema.md).
 
 ## Engine
 
-XBRL / Inline XBRL semantics are resolved by [Arelle](https://arelle.org/) (Apache-2.0, XBRL International certified). EDINET Replay does not reimplement context, dimension, unit, or decimals resolution — it maps Arelle's model to a faithful, provenance-preserving JSON and adds EDINET-specific source references.
+XBRL / Inline XBRL semantics are intended to be resolved by [Arelle](https://arelle.org/) (Apache-2.0, XBRL International certified). EDINET Replay does not reimplement context, dimension, unit, or accuracy resolution — it is designed to map Arelle's model to a faithful, provenance-preserving JSON and add EDINET-specific source references.
 
 ## Documentation
 
@@ -71,7 +85,3 @@ Apache License 2.0. See [LICENSE](LICENSE).
 ## Citation
 
 If you use EDINET Replay in research, please cite it — see [CITATION.cff](CITATION.cff).
-
-## Commercial services
-
-The open-source project covers retrieval, faithful reproduction, and provenance. Commercial services may include managed historical datasets, extraction audits, taxonomy migration analysis, normalized disclosure datasets, and enterprise support.
