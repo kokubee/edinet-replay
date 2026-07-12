@@ -27,7 +27,11 @@ class PackageValidationError(EdinetReplayError):
 
 
 class UnsafeArchiveError(PackageValidationError):
-    """A ZIP entry path is unsafe (traversal / absolute / duplicate)."""
+    """A ZIP entry path is unsafe (traversal / absolute / duplicate / symlink)."""
+
+
+class PackageConflictError(PackageValidationError):
+    """A stored package's bytes do not match the expected hash (no silent overwrite)."""
 
 
 class TaxonomyResolutionError(EdinetReplayError):
