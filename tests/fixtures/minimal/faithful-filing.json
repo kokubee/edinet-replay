@@ -4,7 +4,7 @@
     "document_id": "S100ABCD"
   },
   "canonicalization": {
-    "json_profile": "faithful-filing-jcs-v1",
+    "json_profile": "edinet-replay-canonical-json-v1",
     "xml_c14n": "xml-c14n-1.1-without-comments"
   },
   "facts": {

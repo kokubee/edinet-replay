@@ -190,12 +190,20 @@ def project_faithful_filing(
     id_by_obj: dict = {}
 
     def sort_key(f):
+        # Total order so the occurrence index (and thus every source_fact_id) is
+        # deterministic regardless of Arelle's internal fact iteration order.
+        # Two facts identical in all of these are true duplicates whose swap does
+        # not change the output.
         ctx, unit = f.context, f.unit
         return (
             f.sourceline or -1,
             f.qname.clarkNotation,
             ctx.id if ctx is not None else "",
             unit.id if unit is not None else "",
+            "" if f.isNil else (f.value or ""),
+            f.decimals or "",
+            f.precision or "",
+            f.isNil,
         )
 
     occurrence: dict = {}
@@ -238,7 +246,7 @@ def project_faithful_filing(
         "filing_schema_version": schema_version,
         "filing": {"document_id": document_id},
         "canonicalization": {
-            "json_profile": "faithful-filing-jcs-v1",
+            "json_profile": "edinet-replay-canonical-json-v1",
             "xml_c14n": "xml-c14n-1.1-without-comments",
         },
         "provenance_capabilities": {
@@ -270,7 +278,18 @@ def _project_footnotes(model, id_by_obj) -> tuple[dict, list]:
         resource = rel.toModelObject
         if fact_id is None or resource is None:
             continue
-        fn_id = resource.get("id") or f"fn-{abs(hash(resource)) % (1 << 32):08x}"
+        fn_id = resource.get("id")
+        if not fn_id:
+            # Deterministic id from content (Python's object hash is per-process
+            # randomized and must never leak into the output).
+            basis = "\x00".join(
+                [
+                    resource.stringValue or "",
+                    getattr(resource, "role", None) or "",
+                    getattr(resource, "xmlLang", None) or "",
+                ]
+            )
+            fn_id = "fn-" + hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
         if fn_id not in footnotes:
             footnotes[fn_id] = {
                 "role": getattr(resource, "role", None),

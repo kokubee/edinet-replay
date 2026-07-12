@@ -1,0 +1,18 @@
+{
+  "document_id": "S100W1NC",
+  "source_raw_sha256": "36eabd861a975e3f2893508d259185627a1cadd25d8bf3de5e33e28a5f9a7c35",
+  "source_content_sha256": "cfee5f82993d75f7446e57ece65ca80b51668935b389d42dfb42a5278cfe650a",
+  "taxonomy_raw_sha256": "70abacbac7b9d897dc794faadb4a2be46775f618ab79a8888622847a4d62ae90",
+  "taxonomy_content_sha256": "69d741351386f42bd7488857d84f028578f3a76ae5cde75db1db210829885261",
+  "arelle_version": "2.42.0",
+  "extractor_version": "0.1.0",
+  "manifest_schema_version": "1.0.0",
+  "filing_schema_version": "1.0.0",
+  "canonicalization_profile": "edinet-replay-canonical-json-v1",
+  "fact_count": 2590,
+  "context_count": 347,
+  "unit_count": 4,
+  "footnote_relationship_count": 127,
+  "canonical_output_sha256": "1785c008cb1856ae9115af40ab9009be05eb92e3d1cf9514a614c31a37cd1dd9",
+  "canonical_output_size_bytes": 8952416
+}

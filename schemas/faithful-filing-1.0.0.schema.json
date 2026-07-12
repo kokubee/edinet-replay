@@ -32,8 +32,8 @@
       "properties": {
         "json_profile": {
           "type": "string",
-          "enum": ["faithful-filing-jcs-v1"],
-          "description": "UTF-8; no Unicode normalization; JSON keys sorted by Unicode code point; no insignificant whitespace; no trailing newline; numbers carried as strings; maps ordered by id; arrays in the order defined by this schema. RFC 8785 JCS-aligned. See docs/canonicalization-v1.md."
+          "enum": ["edinet-replay-canonical-json-v1"],
+          "description": "Project-specific canonical JSON (NOT a claim of full RFC 8785 JCS conformance): UTF-8, no BOM, no Unicode normalization; object member names sorted by Unicode code point; no insignificant whitespace; no trailing newline; financial values carried as strings; booleans/null native; arrays preserve producer order (the producer emits deterministic order; canonicalization never re-sorts arrays). See docs/canonicalization-v1.md."
         },
         "xml_c14n": {
           "type": "string",
