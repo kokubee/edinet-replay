@@ -32,6 +32,31 @@ EDINET Replay focuses on **faithful reproduction rather than financial interpret
 - Validation fixtures covering numeric, textual, dimensional, nil, unit, and footnote structures
 - Schema and semantic validation tests
 - Documentation of the intended provenance and reproducibility model
+- An EDINET API v2 client for the daily document list and raw package download
+
+### Retrieval example
+
+```python
+from edinet_replay.client import EdinetClient
+
+client = EdinetClient()  # key from EDINET_API_KEY (sent as a header, never in URLs)
+
+listing = client.list_documents("2025-06-27")
+originals = [d for d in listing.documents if not d.is_amendment]
+
+download = client.download_document(originals[0].document_id)
+# download.content is the submission ZIP exactly as received;
+# listing/download carry retrieved_at and api_version for the manifest.
+```
+
+The client translates EDINET's body-level statuses — observed EDINET
+API-level errors may be returned as HTTP 200 with the effective status in the
+response body: an invalid subscription key raises
+`EdinetAuthenticationError`, and an unknown docID raises
+`DocumentNotFoundError`. Transport-level HTTP errors are handled separately:
+real HTTP 429/5xx failures are retried before raising
+`EdinetRateLimitError`/`EdinetTransportError`. The API key never appears in
+URLs, logs, or exception messages.
 
 ## Planned scope
 

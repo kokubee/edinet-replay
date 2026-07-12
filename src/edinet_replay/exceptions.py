@@ -15,7 +15,30 @@ class ConfigurationError(EdinetReplayError):
 
 
 class EdinetApiError(EdinetReplayError):
-    """The EDINET API returned an error or an unexpected response."""
+    """The EDINET API returned an error or an unexpected response.
+
+    EDINET v2 responds ``HTTP 200`` even for errors and reports the real status
+    inside the body, so subclasses distinguish transport-level failures (real
+    HTTP 4xx/5xx, timeouts) from body-level ones (authentication, unexpected
+    payloads). Exception messages never contain the API key or full request
+    URLs.
+    """
+
+
+class EdinetAuthenticationError(EdinetApiError):
+    """The API rejected the subscription key (HTTP 200 + body ``StatusCode`` 401)."""
+
+
+class EdinetTransportError(EdinetApiError):
+    """HTTP-level failure (4xx/5xx status, timeout, or network error)."""
+
+
+class EdinetRateLimitError(EdinetTransportError):
+    """HTTP 429 persisted after the configured retries."""
+
+
+class EdinetResponseError(EdinetApiError):
+    """HTTP 200 with an unexpected or undecodable payload."""
 
 
 class DocumentNotFoundError(EdinetReplayError):

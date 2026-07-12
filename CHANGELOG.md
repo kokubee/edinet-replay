@@ -30,9 +30,30 @@ inline (iXBRL) presentation layer are not yet implemented.
   `fetch`/`extract` are declared but not yet implemented.
 - Golden regressions for E04236 (JP GAAP) and E00492 (IFRS), byte-stable across
   independent runs.
+- Live EDINET API v2 client: `EdinetClient.list_documents()` /
+  `EdinetClient.download_document()`. Authenticates via the
+  `Ocp-Apim-Subscription-Key` header (the key never appears in URLs, logs, or
+  exception messages), translates EDINET's body-level statuses — observed
+  API-level errors may arrive as HTTP 200 with the effective status in the
+  body — into a typed hierarchy
+  (`EdinetAuthenticationError` for body `StatusCode` 401,
+  `DocumentNotFoundError` for body 404, `EdinetResponseError` for unexpected
+  payloads), validates content types, distinguishes ZIP payloads from JSON
+  error bodies, retries only real HTTP 429/5xx, and returns result types
+  carrying `retrieved_at` and `api_version`. New models:
+  `DocumentListResult`, `DocumentDownload`; `DocumentMetadata` gains
+  `parent_document_id` (and `is_amendment` is derived from it). The client's
+  HTTP layer is injectable, so unit tests run without any key; optional live
+  tests are gated behind `EDINET_REPLAY_LIVE_API_TESTS=1`.
+
+### Changed
+
+- `EdinetClient` constructor: the undocumented `session` stub parameter is now
+  `transport` (an injectable minimal HTTP layer); `retry_backoff` added.
 
 ### Known limitations
 
-- No retrieval client yet (`fetch`) and no inline-XBRL document-set extraction
-  (no lexical/display/transform provenance).
+- No CLI `fetch` yet (the library client exists; wiring it into the CLI and
+  package store is a separate change) and no inline-XBRL document-set
+  extraction (no lexical/display/transform provenance).
 - Real-data golden tests require local EDINET filings and taxonomy packages.
