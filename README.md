@@ -58,6 +58,18 @@ real HTTP 429/5xx failures are retried before raising
 `EdinetRateLimitError`/`EdinetTransportError`. The API key never appears in
 URLs, logs, or exception messages.
 
+The same retrieval is available from the CLI (the key is read only from
+`EDINET_API_KEY`; there is deliberately no `--api-key` flag). Selection is
+never implicit — with `--date` you either `--list-only` or name a `--select`
+strategy, and the printed record keeps the full candidate set:
+
+```console
+$ edinet-replay fetch --date 2025-06-27 --edinet-code E04236 --list-only
+$ edinet-replay fetch --date 2025-06-27 --edinet-code E04236 \
+    --select latest-original-filing --store ./store
+$ edinet-replay fetch --document-id S100W1NC --store ./store
+```
+
 ## Planned scope
 
 EDINET Replay is intended to:
