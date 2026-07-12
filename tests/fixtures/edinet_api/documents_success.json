@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "title": "提出された書類を把握するためのAPI",
+    "parameter": {
+      "date": "2025-06-27",
+      "type": "2"
+    },
+    "resultset": {
+      "count": 2
+    },
+    "processDateTime": "2026-07-12 00:00",
+    "status": "200",
+    "message": "OK"
+  },
+  "results": [
+    {
+      "seqNumber": 1,
+      "docID": "S100W830",
+      "edinetCode": "E40399",
+      "secCode": "330A0",
+      "JCN": "3010001192221",
+      "filerName": "株式会社ＴａｌｅｎｔＸ",
+      "fundCode": null,
+      "ordinanceCode": "010",
+      "formCode": "053000",
+      "docTypeCode": "180",
+      "periodStart": null,
+      "periodEnd": null,
+      "submitDateTime": "2025-06-27 09:00",
+      "docDescription": "臨時報告書",
+      "issuerEdinetCode": null,
+      "subjectEdinetCode": null,
+      "subsidiaryEdinetCode": null,
+      "currentReportReason": "第19条第2項第9号の2",
+      "parentDocID": null,
+      "opeDateTime": null,
+      "withdrawalStatus": "0",
+      "docInfoEditStatus": "0",
+      "disclosureStatus": "0",
+      "xbrlFlag": "1",
+      "pdfFlag": "1",
+      "attachDocFlag": "0",
+      "englishDocFlag": "0",
+      "csvFlag": "1",
+      "legalStatus": "1"
+    },
+    {
+      "seqNumber": 21,
+      "docID": "S100W81U",
+      "edinetCode": "E00659",
+      "secCode": "39410",
+      "JCN": "1120001036880",
+      "filerName": "レンゴー株式会社",
+      "fundCode": null,
+      "ordinanceCode": "010",
+      "formCode": "030001",
+      "docTypeCode": "130",
+      "periodStart": null,
+      "periodEnd": null,
+      "submitDateTime": "2025-06-27 09:01",
+      "docDescription": "訂正有価証券報告書－第157期(2024/04/01－2025/03/31)",
+      "issuerEdinetCode": null,
+      "subjectEdinetCode": null,
+      "subsidiaryEdinetCode": null,
+      "currentReportReason": null,
+      "parentDocID": "S100W3X3",
+      "opeDateTime": null,
+      "withdrawalStatus": "0",
+      "docInfoEditStatus": "0",
+      "disclosureStatus": "0",
+      "xbrlFlag": "1",
+      "pdfFlag": "1",
+      "attachDocFlag": "0",
+      "englishDocFlag": "0",
+      "csvFlag": "1",
+      "legalStatus": "1"
+    }
+  ]
+}

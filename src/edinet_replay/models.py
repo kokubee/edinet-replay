@@ -14,7 +14,11 @@ from typing import Any
 
 @dataclass(frozen=True)
 class DocumentMetadata:
-    """One EDINET document as seen in the daily document list."""
+    """One EDINET document as seen in the daily document list.
+
+    ``is_amendment`` is derived mechanically from the list response: an entry
+    whose ``parentDocID`` is set is an amendment of that parent document.
+    """
 
     document_id: str
     edinet_code: str | None = None
@@ -25,6 +29,36 @@ class DocumentMetadata:
     period_end: str | None = None
     submit_datetime: str | None = None
     is_amendment: bool = False
+    parent_document_id: str | None = None
+
+
+@dataclass(frozen=True)
+class DocumentListResult:
+    """The faithful outcome of one ``documents.json`` request.
+
+    Carries the retrieval identity (when, which API version) alongside the
+    documents so a later manifest can record how the list was obtained.
+    ``result_count`` and ``process_datetime`` echo EDINET's own response
+    metadata (``resultset.count`` / ``processDateTime``) verbatim.
+    """
+
+    date: str
+    documents: list[DocumentMetadata]
+    retrieved_at: str
+    api_version: str
+    result_count: int | None = None
+    process_datetime: str | None = None
+
+
+@dataclass(frozen=True)
+class DocumentDownload:
+    """Raw submission package bytes exactly as received, plus retrieval identity."""
+
+    document_id: str
+    content: bytes
+    media_type: str
+    retrieved_at: str
+    api_version: str
 
 
 @dataclass(frozen=True)
