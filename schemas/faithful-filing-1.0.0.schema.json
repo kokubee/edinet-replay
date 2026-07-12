@@ -1,0 +1,310 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://edinet-replay.dev/schemas/faithful-filing-1.0.0.schema.json",
+  "title": "EDINET Replay — Faithful Filing",
+  "description": "OIM-compatible resolved facts for one EDINET filing, plus the provenance needed to return to the original XBRL/iXBRL: original context/unit tables, iXBRL lexical/presentation layers, and per-fact EDINET package source references. Facts carry resolved aspects (the meaning); source_context_ref/source_unit_ref plus the contexts/units tables carry the original references (the origin). Numeric values are strings to preserve large integers, precision, and exponents. Output is intended to be serialized under the canonicalization profile 'faithful-filing-jcs-v1' so the document itself is hashable (golden-by-hash).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "filing_schema_version",
+    "filing",
+    "canonicalization",
+    "facts",
+    "contexts",
+    "units"
+  ],
+  "properties": {
+    "filing_schema_version": { "type": "string", "const": "1.0.0" },
+    "filing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_id"],
+      "description": "Identifies the filing. Pair with the extraction manifest for full reproduction identity.",
+      "properties": {
+        "document_id": { "type": "string", "pattern": "^S[0-9A-Z]{7}$" }
+      }
+    },
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["json_profile", "xml_c14n"],
+      "description": "Canonicalization profiles this document commits to. json_profile governs how the whole document is serialized for hashing; xml_c14n governs typed_dimensions.canonical_xml_sha256.",
+      "properties": {
+        "json_profile": {
+          "type": "string",
+          "enum": ["faithful-filing-jcs-v1"],
+          "description": "UTF-8; no Unicode normalization; JSON keys sorted by Unicode code point; no insignificant whitespace; no trailing newline; numbers carried as strings; maps ordered by id; arrays in the order defined by this schema. RFC 8785 JCS-aligned. See docs/canonicalization-v1.md."
+        },
+        "xml_c14n": {
+          "type": "string",
+          "enum": ["xml-c14n-1.1-without-comments"],
+          "description": "XML Canonicalization method applied before hashing typed-dimension XML, so namespace-prefix differences do not change the hash."
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "description": "Map of fact id -> fact. The key IS the fact id (OIM style).",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/fact" }
+    },
+    "contexts": {
+      "type": "object",
+      "description": "Provenance table of ORIGINAL xbrli:context elements, keyed by original context id (referenced by fact.source_context_ref). Facts also carry the resolved projection in fact.dimensions; this table preserves the original structure.",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/context" }
+    },
+    "units": {
+      "type": "object",
+      "description": "Provenance table of ORIGINAL xbrli:unit elements, keyed by original unit id (referenced by fact.source_unit_ref).",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "additionalProperties": { "$ref": "#/$defs/unit_entry" }
+    },
+    "footnotes": {
+      "type": "object",
+      "description": "Map of footnote id -> footnote resource. Relationships to facts are kept separately in fact_footnote_relationships (XBRL keeps footnotes as related resources, not embedded).",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["content"],
+        "properties": {
+          "role": { "type": ["string", "null"] },
+          "arcrole": { "type": ["string", "null"] },
+          "lang": { "type": ["string", "null"] },
+          "content": { "type": "string" }
+        }
+      }
+    },
+    "fact_footnote_relationships": {
+      "type": "array",
+      "description": "fact -> footnote relationships, ordered by (fact_id, footnote_id, arcrole).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fact_id", "footnote_id"],
+        "properties": {
+          "fact_id": { "type": "string" },
+          "footnote_id": { "type": "string" },
+          "arcrole": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "qname": {
+      "type": "string",
+      "pattern": "^[^\\s:]+:[^\\s:]+$",
+      "description": "Prefixed QName, e.g. jpcrp_cor:Assets or iso4217:JPY."
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "xbrl_date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$",
+      "description": "xs:date or xs:dateTime lexical form, preserved as-is."
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scheme", "identifier"],
+      "properties": {
+        "scheme": { "type": "string" },
+        "identifier": { "type": "string" }
+      }
+    },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["instant", "duration", "forever"] },
+        "instant": { "$ref": "#/$defs/xbrl_date" },
+        "start": { "$ref": "#/$defs/xbrl_date" },
+        "end": { "$ref": "#/$defs/xbrl_date" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "instant" } } },
+          "then": { "required": ["instant"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "duration" } } },
+          "then": { "required": ["start", "end"] }
+        }
+      ]
+    },
+    "unit_measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator"],
+      "properties": {
+        "numerator": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/qname" }
+        },
+        "denominator": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/qname" },
+          "default": []
+        }
+      }
+    },
+    "source_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_path"],
+      "description": "Pointer back into the EDINET package. package_path is always present; element_id/line/column/xpath depend on the parser and are optional.",
+      "properties": {
+        "package_path": {
+          "type": "string",
+          "description": "Path within the submission ZIP, e.g. XBRL/PublicDoc/example_ixbrl.htm."
+        },
+        "document_uri": { "type": ["string", "null"], "format": "uri" },
+        "element_id": { "type": ["string", "null"] },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "column": { "type": ["integer", "null"], "minimum": 0 },
+        "xpath": { "type": ["string", "null"] }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entity", "period"],
+      "properties": {
+        "entity": { "$ref": "#/$defs/entity" },
+        "period": { "$ref": "#/$defs/period" },
+        "segment_xml": {
+          "type": ["string", "null"],
+          "description": "Raw xbrli:segment XML as-is, or null if absent."
+        },
+        "scenario_xml": {
+          "type": ["string", "null"],
+          "description": "Raw xbrli:scenario XML as-is, or null if absent."
+        },
+        "source": { "$ref": "#/$defs/source_ref" }
+      }
+    },
+    "unit_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator"],
+      "properties": {
+        "numerator": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/qname" }
+        },
+        "denominator": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/qname" },
+          "default": []
+        },
+        "source": { "$ref": "#/$defs/source_ref" }
+      }
+    },
+    "typed_dimension_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["xml", "canonical_xml_sha256"],
+      "properties": {
+        "xml": {
+          "type": "string",
+          "description": "Raw typed-dimension member XML, preserved verbatim."
+        },
+        "canonical_xml_sha256": {
+          "allOf": [{ "$ref": "#/$defs/sha256" }],
+          "description": "SHA-256 of the member XML after applying canonicalization.xml_c14n, so prefix differences do not change the value."
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nil", "value", "dimensions", "source_context_ref", "source"],
+      "description": "One resolved fact. value is the Arelle-resolved value as a string (null when nil). Optional numeric/text provenance layers reconstruct the original lexical and presented forms.",
+      "properties": {
+        "value": {
+          "type": ["string", "null"],
+          "description": "Arelle-resolved value, as a string to avoid JSON number precision loss. null iff nil is true."
+        },
+        "nil": {
+          "type": "boolean",
+          "description": "True iff the original element carried xsi:nil='true'. Distinguishes an absent value from an empty string: {nil:true,value:null} != {nil:false,value:''}."
+        },
+        "decimals": {
+          "type": ["string", "null"],
+          "description": "Original @decimals verbatim, as a string. Allows 'INF'. Not computed."
+        },
+        "precision": {
+          "type": ["string", "null"],
+          "description": "Original @precision verbatim, as a string. Allows 'INF'. Not computed."
+        },
+        "lexical_value": {
+          "type": "string",
+          "description": "Numeric provenance: the lexical value of the XBRL/iXBRL element before transform (e.g. '123' for a scaled fact)."
+        },
+        "display_text": {
+          "type": "string",
+          "description": "Numeric provenance: the string as presented in the iXBRL document."
+        },
+        "ixbrl_transform": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "iXBRL numeric transform attributes, when the fact came from Inline XBRL.",
+          "properties": {
+            "format": { "type": ["string", "null"] },
+            "scale": { "type": ["integer", "null"] },
+            "sign": { "type": ["string", "null"] }
+          }
+        },
+        "text_value": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resolved"],
+          "description": "Text/textBlock provenance. resolved is the Arelle fact value; lexical and display_html are optional origin layers. Preserve escaped XHTML as-is; do not unescape or reflow.",
+          "properties": {
+            "resolved": { "type": "string" },
+            "lexical": { "type": "string" },
+            "display_html": { "type": "string" }
+          }
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["concept", "entity", "period"],
+          "description": "Resolved OIM-style aspects.",
+          "properties": {
+            "concept": { "$ref": "#/$defs/qname" },
+            "entity": { "$ref": "#/$defs/entity" },
+            "period": { "$ref": "#/$defs/period" },
+            "unit": { "$ref": "#/$defs/unit_measures" },
+            "explicit_dimensions": {
+              "type": "object",
+              "description": "Map of dimension QName -> member QName.",
+              "propertyNames": { "pattern": "^[^\\s:]+:[^\\s:]+$" },
+              "additionalProperties": { "$ref": "#/$defs/qname" },
+              "default": {}
+            },
+            "typed_dimensions": {
+              "type": "object",
+              "description": "Map of dimension QName -> typed member (raw XML + canonical hash).",
+              "propertyNames": { "pattern": "^[^\\s:]+:[^\\s:]+$" },
+              "additionalProperties": { "$ref": "#/$defs/typed_dimension_value" },
+              "default": {}
+            }
+          }
+        },
+        "source_context_ref": {
+          "type": "string",
+          "description": "Original context id (key into contexts)."
+        },
+        "source_unit_ref": {
+          "type": "string",
+          "description": "Original unit id (key into units); present for numeric facts."
+        },
+        "source": { "$ref": "#/$defs/source_ref" }
+      }
+    }
+  }
+}

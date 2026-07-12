@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use EDINET Replay in your research, please cite it as below."
+title: "EDINET Replay: a reproducible, provenance-preserving extraction toolkit for Japan's EDINET corporate filings"
+abstract: >-
+  EDINET Replay retrieves official filing packages from Japan's Financial
+  Services Agency EDINET system, preserves the original source artifacts,
+  resolves XBRL and Inline XBRL through Arelle, and exports faithful,
+  provenance-preserving facts with traceable references back to the source
+  filing. It targets faithful reproduction rather than financial interpretation.
+type: software
+authors:
+  - family-names: Kokubu
+    given-names: Hiroyuki
+version: 0.1.0
+license: Apache-2.0
+repository-code: "https://github.com/kokubee/edinet-replay"
+keywords:
+  - EDINET
+  - XBRL
+  - Inline XBRL
+  - financial disclosure
+  - reproducibility
+  - provenance
+  - Japan

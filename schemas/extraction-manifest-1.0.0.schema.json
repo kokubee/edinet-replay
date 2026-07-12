@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://edinet-replay.dev/schemas/extraction-manifest-1.0.0.schema.json",
+  "title": "EDINET Replay — Extraction Manifest",
+  "description": "Records the reproduction identity of one faithful extraction. Two identities are kept separate: SELECTION identity (given the same candidate set, was the same document chosen?) and EXTRACTION identity (given the same document, is the same faithful JSON produced?). Each hashable input is stored in dual form: raw_sha256 (the received artifact, byte-exact) and content_sha256 (the normalized logical contents, algorithm-pinned). Timestamps and tool extensions are provenance only and belong to no identity. This manifest never contains secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_schema_version",
+    "source_package",
+    "selection",
+    "taxonomy_package",
+    "engine",
+    "extractor",
+    "extraction",
+    "generated_at"
+  ],
+  "properties": {
+    "manifest_schema_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Version of THIS manifest schema. Independent of extractor/engine versions so the output contract evolves separately from the code."
+    },
+    "source_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_id",
+        "raw_sha256",
+        "content_sha256",
+        "content_hash_algorithm",
+        "media_type",
+        "retrieved_at"
+      ],
+      "description": "The raw EDINET submission ZIP as received. raw_sha256 is artifact identity (detects corruption / re-fetch differences; may change if ZIP metadata or internal timestamps change). content_sha256 is the substantive input to extraction identity (stable across recompression).",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "pattern": "^S[0-9A-Z]{7}$",
+          "description": "EDINET docID, e.g. S100XXXX."
+        },
+        "raw_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 of the raw downloaded ZIP bytes exactly as received from EDINET. Artifact identity / evidence preservation."
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "Normalized hash of the logical contents per content_hash_algorithm. The reproduction-identity input; independent of compression and ZIP metadata."
+        },
+        "content_hash_algorithm": {
+          "type": "string",
+          "enum": ["entry-path-and-content-sha256-v1"],
+          "description": "Pinned algorithm. v1 = list file entries (exclude directory entries); normalize path separators to '/', strip leading './', reject any '..'; leave Unicode and case unchanged; per file compute SHA-256 of uncompressed bytes; sort by UTF-8 byte order of path; concatenate records UTF8(path) NUL ASCII(file_sha256) LF; SHA-256 the concatenation. See docs/content-hash-v1.md."
+        },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "retrieved_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the package was fetched from EDINET. Provenance only; part of no identity."
+        },
+        "api_base": {
+          "type": "string",
+          "format": "uri",
+          "description": "EDINET API base URL the package was retrieved from, e.g. https://api.edinet-fsa.go.jp/api/v2."
+        },
+        "entries": {
+          "type": "array",
+          "description": "Per-file inventory (diagnostic). When content_sha256 differs across two fetches, this pinpoints which file changed. Not required.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Normalized entry path (per content_hash_algorithm v1)."
+              },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$",
+                "description": "SHA-256 of this file's uncompressed bytes."
+              }
+            }
+          }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_by",
+        "selector_version",
+        "parameters",
+        "selected_document_id",
+        "candidate_document_ids"
+      ],
+      "description": "Explicit record of WHY this docID was chosen. Selection is never an implicit action of the retrieval layer: correction filings, resubmissions, and same-day multiple filings make 'the latest' ambiguous, so the strategy, its parameters, and the full candidate set are recorded for audit and reproduction.",
+      "properties": {
+        "selected_by": {
+          "type": "string",
+          "description": "Named selector strategy, e.g. latest_original_filing. Must correspond to a versioned selector in the library, not an ad-hoc choice."
+        },
+        "selector_version": { "type": "string" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "The catalog filter that produced the candidate set: e.g. edinet_code, document_type_codes, include_amendments, date_from, date_to. Recorded verbatim so the candidate set is reproducible.",
+          "examples": [
+            {
+              "edinet_code": "E02144",
+              "document_type_codes": ["120"],
+              "include_amendments": false,
+              "date_from": "2025-01-01",
+              "date_to": "2026-07-12"
+            }
+          ]
+        },
+        "selected_document_id": {
+          "type": "string",
+          "pattern": "^S[0-9A-Z]{7}$"
+        },
+        "candidate_document_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^S[0-9A-Z]{7}$" },
+          "description": "Every docID the selector considered before choosing. Must include selected_document_id. Order carries no meaning; selection-identity computation sorts these."
+        }
+      }
+    },
+    "taxonomy_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identifier",
+        "raw_sha256",
+        "content_sha256",
+        "content_hash_algorithm",
+        "resolution"
+      ],
+      "description": "The DTS is part of the extraction INPUT. Same dual-hash rule as source_package: raw_sha256 for the distributed archive, content_sha256 for the logical taxonomy contents (stable if FSA re-zips the same files). Faithful reproduction resolves the DTS offline against this pinned package.",
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "e.g. edinet-taxonomy-2026."
+        },
+        "version": {
+          "type": "string",
+          "description": "e.g. 2026-02-28."
+        },
+        "raw_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "SHA-256 of the distributed taxonomy package archive as received."
+        },
+        "content_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "Normalized content hash per content_hash_algorithm. The reproduction-identity input for the DTS."
+        },
+        "content_hash_algorithm": {
+          "type": "string",
+          "enum": ["entry-path-and-content-sha256-v1"]
+        },
+        "resolution": {
+          "type": "string",
+          "enum": ["offline"],
+          "description": "Must be offline. Faithful extraction resolves the DTS only from this pinned package; online resolution is not reproducible and is disallowed."
+        }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "description": "The XBRL processor. Faithful reproduction is only guaranteed for the exact engine version; different Arelle versions may resolve facts differently.",
+      "properties": {
+        "name": { "type": "string", "const": "Arelle" },
+        "version": {
+          "type": "string",
+          "description": "Exact Arelle release, e.g. 2.42.0."
+        }
+      }
+    },
+    "extractor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "faithful_filing_schema_version"],
+      "description": "The edinet-replay code that mapped the Arelle model to faithful JSON.",
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "faithful_filing_schema_version": {
+          "type": "string",
+          "description": "Version of the faithful-filing output schema this run targets."
+        }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configuration"],
+      "description": "Standard home for every setting that affects faithful output. Part of extraction identity. Any tool option that changes the output must be promoted here from extensions.",
+      "properties": {
+        "configuration": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Output-affecting extraction settings. Empty object if none. Recorded verbatim so extraction identity is recomputable."
+        }
+      }
+    },
+    "identities": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional precomputed identity digests. NOT required in schema 1.0.0: it is more important that the CONSTITUENTS of each identity (above) are recorded than that the digest is materialized. A digest may be added as a derived field once the identity algorithms are frozen. selection_identity = f(selector name/version, sorted candidate ids, selected id, parameters). extraction_identity = f(source content_sha256, taxonomy content_sha256, engine version, extractor version, faithful_filing_schema_version, extraction.configuration). Neither includes any timestamp or extensions.",
+      "properties": {
+        "selection_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm"],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": ["selection-identity-v1"]
+            },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        },
+        "extraction_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm"],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": ["extraction-identity-v1"]
+            },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced escape hatch for tool-specific data. NEVER part of any reproduction identity. Settings that affect faithful output must be promoted to extraction.configuration instead of living here.",
+      "propertyNames": { "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)+$" },
+      "additionalProperties": true,
+      "examples": [{ "jp.example.tool": { "cache_backend": "filesystem" } }]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this manifest (and the paired faithful-filing output) was produced. Provenance only; part of no identity."
+    }
+  }
+}

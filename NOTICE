@@ -1,0 +1,16 @@
+EDINET Replay
+Copyright 2026 Hiroyuki Kokubu
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+XBRL and Inline XBRL are resolved using Arelle (https://arelle.org/), which is
+licensed under the Apache License 2.0. Arelle is a dependency and is not
+distributed as part of this project.
+
+This project is not affiliated with or endorsed by Japan's Financial Services
+Agency (FSA). "EDINET" is the name of the FSA's statutory disclosure system and
+is used here only to describe what this software interoperates with.

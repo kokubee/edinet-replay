@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+# vendored taxonomy packages and cached filings (large, fetched, not source)
+var/
+cache/
