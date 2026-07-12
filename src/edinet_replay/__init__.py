@@ -7,7 +7,7 @@ dedicated :mod:`edinet_replay.exceptions` error).
 """
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.0a1"
 
 from .hashing import CONTENT_HASH_ALGORITHM, content_sha256_v1, zip_content_sha256_v1
 

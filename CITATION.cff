@@ -11,7 +11,7 @@ type: software
 authors:
   - family-names: Kokubu
     given-names: Hiroyuki
-version: 0.1.0
+version: 0.1.0-alpha.1
 license: Apache-2.0
 repository-code: "https://github.com/kokubee/edinet-replay"
 keywords:
