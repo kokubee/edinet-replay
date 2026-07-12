@@ -6,6 +6,7 @@ cross-checks the .xbrl fact set against the inline document set (count AND
 signature). Skipped unless the local taxonomy zip and the E04236 package exist.
 """
 import collections
+import os
 import pathlib
 import xml.etree.ElementTree as ET
 
@@ -19,9 +20,8 @@ from arelle import Cntlr, Version  # noqa: E402
 
 HOME = pathlib.Path.home()
 TAXO_ZIP = HOME / ".cache/edinet-replay/taxonomies/edinet-fsa-2024-11-01/1c_Taxonomy.zip"
-PKG = pathlib.Path(
-    "/Users/kokubee/code2026/snecompass/scripts/cache/edinet_cache/E04236/S100W1NC"
-)
+FILINGS = pathlib.Path(os.environ.get("EDINET_REPLAY_TEST_FILINGS", ""))
+PKG = FILINGS / "E04236/S100W1NC"
 RAW_ZIP = PKG.with_suffix(".zip")
 PUBLIC_DOC = PKG / "XBRL" / "PublicDoc"
 XBRL = PUBLIC_DOC / "jpcrp030000-asr-001_E04236-000_2025-03-31_01_2025-06-23.xbrl"

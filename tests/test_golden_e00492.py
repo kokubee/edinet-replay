@@ -8,6 +8,7 @@ Skipped unless the local taxonomy zip and the E00492 filing are present.
 import gzip
 import hashlib
 import json
+import os
 import pathlib
 
 import pytest
@@ -18,9 +19,10 @@ pytest.importorskip("arelle")
 
 HOME = pathlib.Path.home()
 TAXO_ZIP = HOME / ".cache/edinet-replay/taxonomies/edinet-fsa-2023-12-01/1c_Taxonomy.zip"
-XBRL = pathlib.Path(
-    "/Users/kokubee/code2026/snecompass/scripts/cache/edinet_cache/E00492/S100VH9B/"
-    "XBRL/PublicDoc/jpcrp030000-asr-001_E00492-000_2024-12-31_01_2025-03-26.xbrl"
+FILINGS = pathlib.Path(os.environ.get("EDINET_REPLAY_TEST_FILINGS", ""))
+XBRL = (
+    FILINGS
+    / "E00492/S100VH9B/XBRL/PublicDoc/jpcrp030000-asr-001_E00492-000_2024-12-31_01_2025-03-26.xbrl"
 )
 GOLD_DIR = pathlib.Path(__file__).resolve().parent / "golden"
 GOLD_META = json.loads((GOLD_DIR / "E00492-S100VH9B.json").read_text(encoding="utf-8"))

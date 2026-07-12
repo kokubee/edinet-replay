@@ -1,6 +1,7 @@
 """Integration test: E04236's DTS resolves offline from the isolated taxonomy
 cache, with no network. Skipped unless the local taxonomy zip and the E04236
 filing are present (they are large external assets, not committed)."""
+import os
 import pathlib
 
 import pytest
@@ -12,9 +13,12 @@ from edinet_replay import extract  # noqa: E402
 
 HOME = pathlib.Path.home()
 TAXO_ZIP = HOME / ".cache/edinet-replay/taxonomies/edinet-fsa-2024-11-01/1c_Taxonomy.zip"
-FILING = pathlib.Path(
-    "/Users/kokubee/code2026/snecompass/scripts/cache/edinet_cache/E04236/S100W1NC/"
-    "XBRL/PublicDoc/jpcrp030000-asr-001_E04236-000_2025-03-31_01_2025-06-23.xbrl"
+# Real filings live outside the repo; point EDINET_REPLAY_TEST_FILINGS at the
+# directory holding {edinetCode}/{docID}/... (tests skip when unset/missing).
+FILINGS = pathlib.Path(os.environ.get("EDINET_REPLAY_TEST_FILINGS", ""))
+FILING = (
+    FILINGS
+    / "E04236/S100W1NC/XBRL/PublicDoc/jpcrp030000-asr-001_E04236-000_2025-03-31_01_2025-06-23.xbrl"
 )
 
 pytestmark = pytest.mark.skipif(
