@@ -14,7 +14,9 @@ inline (iXBRL) presentation layer are not yet implemented.
 
 - Versioned JSON Schemas: `extraction-manifest-1.0.0` and `faithful-filing-1.0.0`.
 - Content hashing (`entry-path-and-content-sha256-v1`) and the canonical JSON
-  profile (`edinet-replay-canonical-json-v1`).
+  profile (`edinet-replay-canonical-json-v1`). The typed-dimension XML
+  canonicalization profile is XML Canonicalization 2.0, as implemented by lxml's
+  `c14n2` method (declared as `xml-c14n2`).
 - Package storage with dual hashes, Zip-Slip-safe extraction, and idempotency.
 - Taxonomy registry with pinned, hash-verified, **offline** DTS resolution using
   an isolated, content-hash-namespaced Arelle web cache (never touches Arelle's

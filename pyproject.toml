@@ -23,7 +23,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-xbrl = ["arelle-release>=2.36"]
+# lxml is imported directly by edinet_replay.extract (typed-dimension XML and
+# c14n2 hashing); declare it explicitly rather than relying on Arelle's
+# transitive dependency.
+xbrl = ["arelle-release>=2.36", "lxml>=4.9"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.urls]
