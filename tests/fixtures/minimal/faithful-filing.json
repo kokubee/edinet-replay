@@ -1,0 +1,224 @@
+{
+  "filing_schema_version": "1.0.0",
+  "filing": {
+    "document_id": "S100ABCD"
+  },
+  "canonicalization": {
+    "json_profile": "faithful-filing-jcs-v1",
+    "xml_c14n": "xml-c14n-1.1-without-comments"
+  },
+  "facts": {
+    "fact-000001": {
+      "value": "123456789",
+      "nil": false,
+      "decimals": "-6",
+      "dimensions": {
+        "concept": "jppfs_cor:Assets",
+        "entity": {
+          "scheme": "http://disclosure.edinet-fsa.go.jp",
+          "identifier": "E02144"
+        },
+        "period": {
+          "type": "instant",
+          "instant": "2026-03-31"
+        },
+        "unit": {
+          "numerator": [
+            "iso4217:JPY"
+          ],
+          "denominator": []
+        }
+      },
+      "source_context_ref": "CY_Instant",
+      "source_unit_ref": "JPY",
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm",
+        "element_id": "xbrl-fact-1",
+        "line": 100
+      }
+    },
+    "fact-000002": {
+      "value": "1.2345",
+      "nil": false,
+      "decimals": "2",
+      "numeric_provenance": {
+        "lexical_value": "1.2345",
+        "display_text": "1.2345",
+        "ixbrl_transform": {
+          "format": "ixt:numdotdecimal",
+          "scale": "0",
+          "sign": null
+        }
+      },
+      "dimensions": {
+        "concept": "jpcrp_cor:NetIncomePerShareSummaryOfBusinessResults",
+        "entity": {
+          "scheme": "http://disclosure.edinet-fsa.go.jp",
+          "identifier": "E02144"
+        },
+        "period": {
+          "type": "instant",
+          "instant": "2026-03-31"
+        },
+        "unit": {
+          "numerator": [
+            "iso4217:JPY"
+          ],
+          "denominator": [
+            "xbrli:shares"
+          ]
+        },
+        "explicit_dimensions": {
+          "jppfs_cor:ConsolidatedOrNonConsolidatedAxis": "jppfs_cor:ConsolidatedMember"
+        }
+      },
+      "source_context_ref": "CY_Instant_Seg",
+      "source_unit_ref": "JPY_per_Share",
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm",
+        "element_id": "xbrl-fact-2",
+        "line": 120
+      }
+    },
+    "fact-000003": {
+      "value": "<div>Business risks ...</div>",
+      "nil": false,
+      "language": "ja",
+      "text_provenance": {
+        "lexical_value": "&lt;div&gt;Business risks ...&lt;/div&gt;",
+        "display_html": "<div>Business risks ...</div>"
+      },
+      "dimensions": {
+        "concept": "jpcrp_cor:BusinessRisksTextBlock",
+        "entity": {
+          "scheme": "http://disclosure.edinet-fsa.go.jp",
+          "identifier": "E02144"
+        },
+        "period": {
+          "type": "duration",
+          "start": "2025-04-01",
+          "end": "2026-03-31"
+        },
+        "typed_dimensions": {
+          "jpcrp_cor:ProductLineAxis": {
+            "xml": "<jpcrp_cor:ProductLineMember>SegmentA</jpcrp_cor:ProductLineMember>",
+            "canonical_xml_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        }
+      },
+      "source_context_ref": "CY_Duration_Typed",
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm",
+        "element_id": "xbrl-fact-3",
+        "line": 140
+      }
+    },
+    "fact-000004": {
+      "value": null,
+      "nil": true,
+      "dimensions": {
+        "concept": "jppfs_cor:Goodwill",
+        "entity": {
+          "scheme": "http://disclosure.edinet-fsa.go.jp",
+          "identifier": "E02144"
+        },
+        "period": {
+          "type": "instant",
+          "instant": "2026-03-31"
+        },
+        "unit": {
+          "numerator": [
+            "iso4217:JPY"
+          ],
+          "denominator": []
+        }
+      },
+      "source_context_ref": "CY_Instant",
+      "source_unit_ref": "JPY",
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm",
+        "element_id": "xbrl-fact-4",
+        "line": 160
+      }
+    }
+  },
+  "contexts": {
+    "CY_Instant": {
+      "entity": {
+        "scheme": "http://disclosure.edinet-fsa.go.jp",
+        "identifier": "E02144"
+      },
+      "period": {
+        "type": "instant",
+        "instant": "2026-03-31"
+      },
+      "segment_xml": null,
+      "scenario_xml": null,
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm"
+      }
+    },
+    "CY_Instant_Seg": {
+      "entity": {
+        "scheme": "http://disclosure.edinet-fsa.go.jp",
+        "identifier": "E02144"
+      },
+      "period": {
+        "type": "instant",
+        "instant": "2026-03-31"
+      },
+      "segment_xml": "<xbrli:segment><xbrldi:explicitMember dimension=\"jppfs_cor:ConsolidatedOrNonConsolidatedAxis\">jppfs_cor:ConsolidatedMember</xbrldi:explicitMember></xbrli:segment>",
+      "scenario_xml": null,
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm"
+      }
+    },
+    "CY_Duration_Typed": {
+      "entity": {
+        "scheme": "http://disclosure.edinet-fsa.go.jp",
+        "identifier": "E02144"
+      },
+      "period": {
+        "type": "duration",
+        "start": "2025-04-01",
+        "end": "2026-03-31"
+      },
+      "segment_xml": null,
+      "scenario_xml": "<xbrli:scenario><xbrldi:typedMember dimension=\"jpcrp_cor:ProductLineAxis\"><jpcrp_cor:ProductLineMember>SegmentA</jpcrp_cor:ProductLineMember></xbrldi:typedMember></xbrli:scenario>",
+      "source": {
+        "package_path": "XBRL/PublicDoc/example_ixbrl.htm"
+      }
+    }
+  },
+  "units": {
+    "JPY": {
+      "numerator": [
+        "iso4217:JPY"
+      ],
+      "denominator": []
+    },
+    "JPY_per_Share": {
+      "numerator": [
+        "iso4217:JPY"
+      ],
+      "denominator": [
+        "xbrli:shares"
+      ]
+    }
+  },
+  "footnotes": {
+    "fn-01": {
+      "role": "http://www.xbrl.org/2003/role/link",
+      "arcrole": "http://www.xbrl.org/2003/arcrole/fact-footnote",
+      "lang": "ja",
+      "content": "注記本文のサンプルです。"
+    }
+  },
+  "fact_footnote_relationships": [
+    {
+      "fact_id": "fact-000001",
+      "footnote_id": "fn-01",
+      "arcrole": "http://www.xbrl.org/2003/arcrole/fact-footnote"
+    }
+  ]
+}

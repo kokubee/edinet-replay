@@ -54,6 +54,7 @@
           "enum": ["entry-path-and-content-sha256-v1"],
           "description": "Pinned algorithm. v1 = list file entries (exclude directory entries); normalize path separators to '/', strip leading './', reject any '..'; leave Unicode and case unchanged; per file compute SHA-256 of uncompressed bytes; sort by UTF-8 byte order of path; concatenate records UTF8(path) NUL ASCII(file_sha256) LF; SHA-256 the concatenation. See docs/content-hash-v1.md."
         },
+        "media_type": { "type": "string", "const": "application/zip" },
         "size_bytes": { "type": "integer", "minimum": 0 },
         "retrieved_at": {
           "type": "string",

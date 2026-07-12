@@ -45,25 +45,25 @@
     "facts": {
       "type": "object",
       "description": "Map of fact id -> fact. The key IS the fact id (OIM style).",
-      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "propertyNames": { "pattern": "^[A-Za-z0-9_][A-Za-z0-9._:-]*$" },
       "additionalProperties": { "$ref": "#/$defs/fact" }
     },
     "contexts": {
       "type": "object",
       "description": "Provenance table of ORIGINAL xbrli:context elements, keyed by original context id (referenced by fact.source_context_ref). Facts also carry the resolved projection in fact.dimensions; this table preserves the original structure.",
-      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "propertyNames": { "pattern": "^[A-Za-z0-9_][A-Za-z0-9._:-]*$" },
       "additionalProperties": { "$ref": "#/$defs/context" }
     },
     "units": {
       "type": "object",
       "description": "Provenance table of ORIGINAL xbrli:unit elements, keyed by original unit id (referenced by fact.source_unit_ref).",
-      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "propertyNames": { "pattern": "^[A-Za-z0-9_][A-Za-z0-9._:-]*$" },
       "additionalProperties": { "$ref": "#/$defs/unit_entry" }
     },
     "footnotes": {
       "type": "object",
       "description": "Map of footnote id -> footnote resource. Relationships to facts are kept separately in fact_footnote_relationships (XBRL keeps footnotes as related resources, not embedded).",
-      "propertyNames": { "pattern": "^[A-Za-z0-9_.:-]+$" },
+      "propertyNames": { "pattern": "^[A-Za-z0-9_][A-Za-z0-9._:-]*$" },
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
@@ -222,7 +222,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["nil", "value", "dimensions", "source_context_ref", "source"],
-      "description": "One resolved fact. value is the Arelle-resolved value as a string (null when nil). Optional numeric/text provenance layers reconstruct the original lexical and presented forms.",
+      "description": "One resolved fact. `value` is the single home of the Arelle-resolved value, as a string (null when nil). Optional numeric_provenance / text_provenance layers reconstruct the original lexical and presented forms without duplicating `value`.",
       "properties": {
         "value": {
           "type": ["string", "null"],
@@ -240,33 +240,51 @@
           "type": ["string", "null"],
           "description": "Original @precision verbatim, as a string. Allows 'INF'. Not computed."
         },
-        "lexical_value": {
-          "type": "string",
-          "description": "Numeric provenance: the lexical value of the XBRL/iXBRL element before transform (e.g. '123' for a scaled fact)."
+        "language": {
+          "type": ["string", "null"],
+          "description": "xml:lang of the fact (for string-typed facts), e.g. 'ja'. null if absent."
         },
-        "display_text": {
-          "type": "string",
-          "description": "Numeric provenance: the string as presented in the iXBRL document."
-        },
-        "ixbrl_transform": {
+        "numeric_provenance": {
           "type": "object",
           "additionalProperties": false,
-          "description": "iXBRL numeric transform attributes, when the fact came from Inline XBRL.",
+          "description": "Origin layers for a numeric fact. The resolved value lives in the top-level `value`; these reconstruct the pre-transform lexical and presented forms.",
           "properties": {
-            "format": { "type": ["string", "null"] },
-            "scale": { "type": ["integer", "null"] },
-            "sign": { "type": ["string", "null"] }
+            "lexical_value": {
+              "type": "string",
+              "description": "Lexical value of the XBRL/iXBRL element before transform (e.g. '123' for a scaled fact)."
+            },
+            "display_text": {
+              "type": "string",
+              "description": "The string as presented in the iXBRL document."
+            },
+            "ixbrl_transform": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "iXBRL numeric transform attributes, when the fact came from Inline XBRL.",
+              "properties": {
+                "format": { "type": ["string", "null"] },
+                "scale": {
+                  "type": ["string", "null"],
+                  "description": "Original @scale, verbatim as a string (numbers are carried as strings)."
+                },
+                "sign": { "type": ["string", "null"] }
+              }
+            }
           }
         },
-        "text_value": {
+        "text_provenance": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["resolved"],
-          "description": "Text/textBlock provenance. resolved is the Arelle fact value; lexical and display_html are optional origin layers. Preserve escaped XHTML as-is; do not unescape or reflow.",
+          "description": "Origin layers for a text/textBlock fact. The resolved value lives in the top-level `value` (e.g. resolved XHTML); these preserve the lexical and presented forms. Preserve escaped XHTML as-is; do not unescape or reflow.",
           "properties": {
-            "resolved": { "type": "string" },
-            "lexical": { "type": "string" },
-            "display_html": { "type": "string" }
+            "lexical_value": {
+              "type": "string",
+              "description": "Lexical value of the element in the source XML (e.g. escaped XHTML)."
+            },
+            "display_html": {
+              "type": "string",
+              "description": "The XHTML fragment as presented in the iXBRL DOM."
+            }
           }
         },
         "dimensions": {

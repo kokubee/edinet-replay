@@ -16,10 +16,10 @@ Rules:
 2. No Unicode normalization is applied (NFC/NFD left exactly as parsed).
 3. Object keys are sorted by Unicode code point.
 4. No insignificant whitespace; no trailing newline.
-5. Numbers that carry meaning (fact values, decimals, precision, scale-derived
-   values) are strings, not JSON numbers, to preserve big integers, precision,
-   and exponents. The only JSON numbers that appear are structural integers
-   defined by the schema (e.g. `line`, `column`, `ixbrl_transform.scale`).
+5. Numbers that carry meaning (fact values, decimals, precision, iXBRL scale)
+   are strings, not JSON numbers, to preserve big integers, precision, and
+   exponents. The only JSON numbers that appear are structural integers defined
+   by the schema (e.g. `line`, `column`).
 6. Map containers (`facts`, `contexts`, `units`, `footnotes`) are ordered by
    their id (which is the map key), consistent with rule 3.
 7. Array order is fixed by the schema, not by input order:

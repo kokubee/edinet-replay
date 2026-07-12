@@ -1,0 +1,59 @@
+{
+  "manifest_schema_version": "1.0.0",
+  "source_package": {
+    "document_id": "S100ABCD",
+    "raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "content_hash_algorithm": "entry-path-and-content-sha256-v1",
+    "media_type": "application/zip",
+    "size_bytes": 123456,
+    "retrieved_at": "2026-07-12T00:00:00Z",
+    "api_base": "https://api.edinet-fsa.go.jp/api/v2",
+    "entries": [
+      {
+        "path": "XBRL/PublicDoc/example_ixbrl.htm",
+        "size_bytes": 67890,
+        "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ]
+  },
+  "selection": {
+    "selected_by": "latest_original_filing",
+    "selector_version": "1.0.0",
+    "parameters": {
+      "edinet_code": "E02144",
+      "document_type_codes": [
+        "120"
+      ],
+      "include_amendments": false,
+      "date_from": "2025-01-01",
+      "date_to": "2026-07-12"
+    },
+    "selected_document_id": "S100ABCD",
+    "candidate_document_ids": [
+      "S100ABCD",
+      "S100WXYZ"
+    ]
+  },
+  "taxonomy_package": {
+    "identifier": "edinet-taxonomy-2026",
+    "version": "2026-02-28",
+    "raw_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "content_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "content_hash_algorithm": "entry-path-and-content-sha256-v1",
+    "resolution": "offline"
+  },
+  "engine": {
+    "name": "Arelle",
+    "version": "2.42.0"
+  },
+  "extractor": {
+    "name": "edinet-replay",
+    "version": "0.1.0",
+    "faithful_filing_schema_version": "1.0.0"
+  },
+  "extraction": {
+    "configuration": {}
+  },
+  "generated_at": "2026-07-12T00:00:00Z"
+}

@@ -1,0 +1,4 @@
+# Development / test dependencies (stopgap until pyproject.toml lands with the
+# module scaffold). Runtime will additionally require Arelle.
+jsonschema>=4.0
+pytest>=8.0
