@@ -66,6 +66,17 @@ def register(
                 f"{identifier}/{ver} already registered with different content "
                 f"({prev['content_sha256'][:12]} != {content_hash[:12]})"
             )
+        # Same logical content but possibly different raw bytes (e.g. the same
+        # files re-zipped). The registry keeps the ORIGINAL archive, so return
+        # the stored pin — otherwise a manifest could record a raw_sha256 that
+        # does not match the archive actually on disk.
+        return TaxonomyPackage(
+            identifier=prev["identifier"],
+            path=str(home / "taxonomy.zip"),
+            raw_sha256=prev["raw_sha256"],
+            content_sha256=prev["content_sha256"],
+            version=prev["version"],
+        )
     else:
         (home / "taxonomy.zip").write_bytes(raw)
         extract_safe(home / "taxonomy.zip", home / "extracted")

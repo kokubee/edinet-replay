@@ -39,10 +39,15 @@ Rules:
 8. Map containers (`facts`, `contexts`, `units`, `footnotes`, dimension maps) are
    JSON objects, so their member names sort under rule 4.
 
-## `xml-c14n-1.1-without-comments` (XML)
+## `xml-c14n2` (XML)
 
 Applied to a typed-dimension member's XML before hashing it into
-`typed_dimensions.<axis>.canonical_xml_sha256`. Uses the W3C Canonical XML 1.1
-(omit comments) algorithm so that differences in namespace prefixes, attribute
-order, or insignificant whitespace do not change the hash, while the verbatim
-member is still preserved in the sibling `xml` field.
+`typed_dimensions.<axis>.canonical_xml_sha256`. Uses the W3C **Canonical XML 2.0**
+algorithm with comments omitted (lxml's `c14n2` serialization) so that
+differences in namespace prefixes, attribute order, or insignificant whitespace
+do not change the hash, while the verbatim member is still preserved in the
+sibling `xml` field.
+
+> The profile name states exactly what is computed: lxml implements C14N 1.0 and
+> C14N 2.0 but **not** C14N 1.1, so this project pins 2.0 rather than declaring an
+> algorithm it does not run.

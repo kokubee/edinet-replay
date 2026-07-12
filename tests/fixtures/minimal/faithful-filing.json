@@ -5,7 +5,7 @@
   },
   "canonicalization": {
     "json_profile": "edinet-replay-canonical-json-v1",
-    "xml_c14n": "xml-c14n-1.1-without-comments"
+    "xml_c14n": "xml-c14n2"
   },
   "facts": {
     "fact-000001": {

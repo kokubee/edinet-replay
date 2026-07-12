@@ -44,6 +44,21 @@ def test_taxonomy_reregister_same_content_is_idempotent(tmp_path):
     assert a.content_sha256 == b.content_sha256
 
 
+def test_taxonomy_reregister_recompressed_returns_stored_pin(tmp_path):
+    # Same logical content, different raw bytes (re-zipped): register must return
+    # the ORIGINAL stored pin, not the new file's raw hash, so manifests always
+    # match the archive actually kept in the registry.
+    reg = tmp_path / "registry"
+    files = [("core.xsd", b"<schema/>")]
+    stored = _write(tmp_path, "a.zip", _zip(files, zipfile.ZIP_STORED))
+    deflated = _write(tmp_path, "b.zip", _zip(files, zipfile.ZIP_DEFLATED))
+    first = taxonomy.register(stored, identifier="t", version="v1", registry_dir=reg)
+    second = taxonomy.register(deflated, identifier="t", version="v1", registry_dir=reg)
+    assert first.raw_sha256 == second.raw_sha256  # pin, not the new bytes
+    assert second.content_sha256 == first.content_sha256
+    assert second.path == first.path
+
+
 def test_taxonomy_conflicting_version_is_rejected(tmp_path):
     reg = tmp_path / "registry"
     p1 = _write(tmp_path, "a.zip", _zip([("core.xsd", b"<schema>one</schema>")]))

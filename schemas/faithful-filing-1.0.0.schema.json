@@ -37,8 +37,8 @@
         },
         "xml_c14n": {
           "type": "string",
-          "enum": ["xml-c14n-1.1-without-comments"],
-          "description": "XML Canonicalization method applied before hashing typed-dimension XML, so namespace-prefix differences do not change the hash."
+          "enum": ["xml-c14n2"],
+          "description": "XML canonicalization method applied before hashing typed-dimension XML, so namespace-prefix differences do not change the hash. xml-c14n2 = W3C Canonical XML 2.0, comments omitted (what lxml's c14n2 computes; lxml does not implement C14N 1.1, and this project declares exactly what it computes)."
         }
       }
     },

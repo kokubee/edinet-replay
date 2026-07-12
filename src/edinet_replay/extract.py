@@ -15,6 +15,7 @@ import hashlib
 import re
 from typing import Protocol
 
+from .exceptions import ExtractionError
 from .hashing import CONTENT_HASH_ALGORITHM
 from .models import (
     ExtractionConfiguration,
@@ -76,6 +77,9 @@ def _raw_xml(el) -> str:
 
 
 def _c14n_sha256(el) -> str:
+    # Canonical XML 2.0 without comments (lxml "c14n2", with_comments=False by
+    # default). Declared as "xml-c14n2" in the output; lxml does not implement
+    # C14N 1.1, so we declare exactly what we compute.
     from lxml import etree
 
     return hashlib.sha256(etree.tostring(el, method="c14n2")).hexdigest()
@@ -113,6 +117,11 @@ def _source(package_path: str, obj) -> dict:
 
 def _dimensions(fact) -> dict:
     ctx = fact.context
+    if ctx is None:
+        raise ExtractionError(
+            f"fact {fact.qname} has no context (tuple or malformed instance); "
+            "context-less facts are not representable in faithful-filing 1.0.0"
+        )
     dims = {"concept": str(fact.qname), "entity": _entity(ctx), "period": _period(ctx)}
     if fact.unit is not None:
         nums, dens = fact.unit.measures
@@ -247,7 +256,7 @@ def project_faithful_filing(
         "filing": {"document_id": document_id},
         "canonicalization": {
             "json_profile": "edinet-replay-canonical-json-v1",
-            "xml_c14n": "xml-c14n-1.1-without-comments",
+            "xml_c14n": "xml-c14n2",
         },
         "provenance_capabilities": {
             "resolved_xbrl": True,
