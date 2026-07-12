@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "edinet-replay"
+version = "0.1.0"
+description = "Reproducible, provenance-preserving extraction workflow for Japan's EDINET corporate filings (pre-alpha)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Hiroyuki Kokubu" }]
+keywords = ["EDINET", "XBRL", "Inline XBRL", "financial disclosure", "reproducibility", "provenance", "Japan"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+  "requests>=2.31",
+  "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+arelle = ["arelle-release>=2.36"]
+dev = ["pytest>=8.0"]
+
+[project.urls]
+Homepage = "https://github.com/kokubee/edinet-replay"
+Repository = "https://github.com/kokubee/edinet-replay"
+
+[project.scripts]
+edinet-replay = "edinet_replay.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["edinet_replay"]
