@@ -7,8 +7,9 @@ All notable changes to this project are documented here. The format is based on
 ## [0.1.0-alpha.1] — Unreleased
 
 First pre-alpha. The output contracts and reproducibility model are defined; the
-resolved-XBRL projection works end to end offline. The retrieval client and the
-inline (iXBRL) presentation layer are not yet implemented.
+resolved-XBRL projection works end to end offline, and `fetch` now retrieves,
+selects, and stores real filings through the live EDINET API. The inline (iXBRL)
+presentation layer and CLI `extract` are not yet implemented.
 
 ### Added
 
@@ -26,8 +27,9 @@ inline (iXBRL) presentation layer are not yet implemented.
 - Faithful XBRL projection (resolved layer only): concept, value, entity, period,
   explicit/typed dimensions, unit, decimals/precision, nil, language, footnotes,
   and source location. iXBRL presentation provenance is deferred.
-- CLI: `validate` (manifest/filing) and `inspect` (package hashes/inventory);
-  `fetch`/`extract` are declared but not yet implemented.
+- CLI: `validate` (manifest/filing) and `inspect` (package hashes/inventory).
+  `fetch` is implemented (see below); `extract` is declared but not yet
+  implemented.
 - Golden regressions for E04236 (JP GAAP) and E00492 (IFRS), byte-stable across
   independent runs.
 - Live EDINET API v2 client: `EdinetClient.list_documents()` /
