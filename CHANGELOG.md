@@ -46,6 +46,15 @@ inline (iXBRL) presentation layer are not yet implemented.
   HTTP layer is injectable, so unit tests run without any key; optional live
   tests are gated behind `EDINET_REPLAY_LIVE_API_TESTS=1`.
 
+- CLI `fetch`: wires the client, `catalog.filter_documents`,
+  `selectors.latest_original_filing`, and `package.store` together with no new
+  policy logic. Three modes: `--document-id` (explicit fetch into the
+  content-addressed store), `--date ... --list-only` (filtered document list
+  as JSON), and `--date ... --select latest-original-filing` (explicit,
+  versioned selection; the printed record keeps the full candidate set).
+  Selection is never implicit, and the API key is read only from
+  `EDINET_API_KEY` — there is deliberately no `--api-key` flag.
+
 ### Changed
 
 - `EdinetClient` constructor: the undocumented `session` stub parameter is now
@@ -53,7 +62,6 @@ inline (iXBRL) presentation layer are not yet implemented.
 
 ### Known limitations
 
-- No CLI `fetch` yet (the library client exists; wiring it into the CLI and
-  package store is a separate change) and no inline-XBRL document-set
-  extraction (no lexical/display/transform provenance).
+- No CLI `extract` yet, and no inline-XBRL document-set extraction (no
+  lexical/display/transform provenance).
 - Real-data golden tests require local EDINET filings and taxonomy packages.
