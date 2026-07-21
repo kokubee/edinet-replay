@@ -11,7 +11,9 @@ type: software
 authors:
   - family-names: Kokubu
     given-names: Hiroyuki
-version: 0.1.0-alpha.1
+    orcid: "https://orcid.org/0009-0007-9053-2949"
+version: 0.1.0-alpha.2
+date-released: "2026-07-21"
 license: Apache-2.0
 repository-code: "https://github.com/kokubee/edinet-replay"
 keywords:

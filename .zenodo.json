@@ -1,0 +1,24 @@
+{
+  "upload_type": "software",
+  "title": "EDINET Replay: a reproducible, provenance-preserving extraction toolkit for Japan's EDINET corporate filings",
+  "description": "<p>EDINET Replay retrieves official filing packages from Japan's Financial Services Agency EDINET system, preserves the original source artifacts, resolves XBRL and Inline XBRL through Arelle, and exports faithful, provenance-preserving facts with traceable references back to the source filing. It targets faithful reproduction rather than financial interpretation.</p><p>This release is pre-alpha. The output contracts and reproducibility model are defined; the resolved-XBRL projection works end to end offline, and the CLI <code>fetch</code> command retrieves, selects, and stores real filings through the live EDINET API v2. The inline (iXBRL) presentation layer and the CLI <code>extract</code> command are not yet implemented. See CHANGELOG.md for the full scope and known limitations.</p>",
+  "creators": [
+    {
+      "name": "Kokubu, Hiroyuki",
+      "orcid": "0009-0007-9053-2949"
+    }
+  ],
+  "license": "Apache-2.0",
+  "access_right": "open",
+  "language": "eng",
+  "keywords": [
+    "EDINET",
+    "XBRL",
+    "Inline XBRL",
+    "financial disclosure",
+    "corporate filings",
+    "reproducibility",
+    "provenance",
+    "Japan"
+  ]
+}

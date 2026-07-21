@@ -4,7 +4,11 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [PEP 440](https://peps.python.org/pep-0440/) / semantic versioning.
 
-## [0.1.0-alpha.1] — Unreleased
+## [0.1.0-alpha.2] — 2026-07-21
+
+Pre-alpha. `0.1.0-alpha.1` was tagged on 2026-07-12, before the EDINET API v2
+client and the CLI `fetch` wiring landed on `main`; both are included here.
+Otherwise the scope is unchanged.
 
 First pre-alpha. The output contracts and reproducibility model are defined; the
 resolved-XBRL projection works end to end offline, and `fetch` now retrieves,
