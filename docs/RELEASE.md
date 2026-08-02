@@ -94,3 +94,26 @@ Prerelease note: plain `pip install edinet-replay` may skip betas; use `==0.1.0b
 - Re-upload the same version
 - Move tags after public consumers may have pinned them
 - Package FSA taxonomy ZIP bodies
+
+## Published: 0.1.0b1 (`v0.1.0-beta.1` @ `b54ef02`)
+
+| Index | URL |
+|-------|-----|
+| PyPI | https://pypi.org/project/edinet-replay/0.1.0b1/ |
+| TestPyPI | https://test.pypi.org/project/edinet-replay/0.1.0b1/ |
+
+Artifact SHA-256 (as built and uploaded):
+
+```
+ae82e79143c1242d7eac7de86b680a66bddecc246b2708d8daadeb23ed768438  edinet_replay-0.1.0b1-py3-none-any.whl
+446c3781b598d4410e56218634abe1e1596a5c69e83fe171cfa17f323e51564a  edinet_replay-0.1.0b1.tar.gz
+```
+
+Install:
+
+```bash
+pip install "edinet-replay[xbrl]==0.1.0b1"
+export EDINET_REPLAY_PINS_DIR=/path/to/edinet-replay/taxonomies   # for extract
+```
+
+Follow-up (not done for this cut): configure PyPI **Trusted Publisher** (GitHub OIDC) so later uploads need no long-lived API token on a laptop.
