@@ -88,10 +88,10 @@ def main() -> None:
             ("$ export EDINET_API_KEY=…   # header auth only — never on the CLI", PROMPT),
             ("$ edinet-replay fetch --document-id S100W1NC --store ./store", PROMPT),
             ('{ "document_id": "S100W1NC",', FG),
-            (
-                '  "package": { "raw_sha256": "36eabd861a97…", "content_sha256": "cfee5f82993d…" },',
-                FG,
-            ),
+            ('  "package": {', FG),
+            ('    "raw_sha256": "36eabd861a97…",', FG),
+            ('    "content_sha256": "cfee5f82993d…"', FG),
+            ("  },", FG),
             ('  "selection": { "selected_by": "explicit_document" } }', FG),
         ]
     )
@@ -129,10 +129,10 @@ def main() -> None:
             ("{", FG),
             ('  "value": "4122148000000",', YELLOW),
             ('  "decimals": "-6",', FG),
-            (
-                '  "dimensions": { "concept": "jppfs_cor:Assets", "unit": { "numerator": ["iso4217:JPY"] } },',
-                FG,
-            ),
+            ('  "dimensions": {', FG),
+            ('    "concept": "jppfs_cor:Assets",', FG),
+            ('    "unit": { "numerator": ["iso4217:JPY"] }', FG),
+            ("  },", FG),
             ('  "source": {', CYAN),
             (
                 '    "package_path": "XBRL/PublicDoc/jpcrp030000-asr-001_E04236-….xbrl",',
