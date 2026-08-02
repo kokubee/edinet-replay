@@ -27,7 +27,7 @@ MODULES = [
 
 
 def test_version():
-    assert __version__ == "0.1.0a2"
+    assert __version__ == "0.1.0b1"
 
 
 @pytest.mark.parametrize("name", MODULES)

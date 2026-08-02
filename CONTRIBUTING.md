@@ -1,6 +1,6 @@
 # Contributing
 
-EDINET Replay is pre-alpha. Contributions and issues are welcome; please read
+EDINET Replay is beta. Contributions and issues are welcome; please read
 [SECURITY.md](SECURITY.md) first (especially the API-key rules).
 
 ## Development setup

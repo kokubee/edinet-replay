@@ -12,8 +12,8 @@ authors:
   - family-names: Kokubu
     given-names: Hiroyuki
     orcid: "https://orcid.org/0009-0007-9053-2949"
-version: 0.1.0-alpha.2
-date-released: "2026-07-21"
+version: 0.1.0-beta.1
+date-released: "2026-08-02"
 license: Apache-2.0
 repository-code: "https://github.com/kokubee/edinet-replay"
 keywords:

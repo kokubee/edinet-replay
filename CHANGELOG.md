@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.1.0-beta.1] — 2026-08-02
+
+First **beta**. The β completion bar is met for resolved XBRL: an explicit
+EDINET ``document_id`` can be fetched as an official ZIP, extracted offline
+against a hash-pinned FSA taxonomy via Arelle, and schema-validated as
+faithful-filing + extraction-manifest JSON. A minimal multi-standard corpus
+pins expected canonical hashes for one JP GAAP, one IFRS, and one US GAAP
+annual report. Inline XBRL presentation provenance remains deferred.
+
 ### Added
 
 - CLI ``extract`` and the ``extract.extract_package`` orchestrator: given an
@@ -25,8 +34,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
-- Package ``__version__`` now matches ``0.1.0a2`` (was still ``0.1.0a1`` after
-  the alpha.2 cut).
+- Package ``__version__`` now matches the declared release (was still
+  ``0.1.0a1`` after the alpha.2 cut; now ``0.1.0b1``).
+
+### Changed
+
+- Project status: pre-alpha → **beta** (PyPI classifier, README, package
+  metadata). Still best-effort; not production-certified.
 
 ## [0.1.0-alpha.2] — 2026-07-21
 

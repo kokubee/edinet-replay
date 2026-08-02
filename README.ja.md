@@ -7,7 +7,7 @@
 
 ![デモ: fetch → extract → validate、fact から ZIP 行へ戻る](docs/assets/demo-extract.gif)
 
-> **現状: pre-alpha。** 解決済み XBRL の縦経路は動きます。βコーパス v1（JP GAAP / IFRS / US GAAP 各1件）は [`corpus/`](corpus/) にあります。iXBRL 表示層の provenance と PyPI は未完です。金融庁非提携。
+> **現状: beta（`0.1.0b1`）。** `fetch → extract → validate` の縦経路（解決済み XBRL）は動きます。βコーパス v1（JP GAAP / IFRS / US GAAP 各1件）は [`corpus/`](corpus/) にあります。iXBRL 表示層の provenance は未完。本番保証なし・best-effort。金融庁非提携。
 
 ## 30秒デモ
 

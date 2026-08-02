@@ -5,9 +5,10 @@ Same source package, same pinned taxonomy, same Arelle version → same output h
 
 ![Demo: fetch → extract → validate, then a fact traced back to its ZIP line](docs/assets/demo-extract.gif)
 
-> **Pre-alpha.** The vertical path works for resolved XBRL. A minimal multi-standard
-> [β corpus](corpus/) (JP GAAP / IFRS / US GAAP) pins fixed docIDs and expected
-> hashes. Inline XBRL presentation provenance and PyPI are still incomplete.
+> **Beta (`0.1.0b1`).** The vertical path `fetch → extract → validate` works for
+> resolved XBRL. A multi-standard [β corpus](corpus/) (JP GAAP / IFRS / US GAAP)
+> pins fixed docIDs and expected hashes. Inline XBRL presentation provenance is
+> still incomplete. Best-effort, not production-certified.
 > Not affiliated with Japan's FSA.
 
 ## 30-second demo
@@ -140,7 +141,7 @@ context / dimension / unit / accuracy resolution.
 
 ## Maintenance · License · Citation
 
-Best-effort pre-alpha; no SLA on issues/PRs. Security: [SECURITY.md](SECURITY.md).  
+Best-effort beta; no SLA on issues/PRs. Security: [SECURITY.md](SECURITY.md).  
 Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).  
 Apache-2.0 — [LICENSE](LICENSE). Cite via [CITATION.cff](CITATION.cff).
 

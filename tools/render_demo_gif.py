@@ -78,7 +78,7 @@ def main() -> None:
         base
         + [
             ('$ pip install -e ".[xbrl]"', PROMPT),
-            ("Successfully installed edinet-replay-0.1.0a2 arelle-release …", DIM),
+            ("Successfully installed edinet-replay-0.1.0b1 arelle-release …", DIM),
         ]
     )
     scenes.append(

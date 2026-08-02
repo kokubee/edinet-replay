@@ -1,4 +1,4 @@
-"""``edinet-replay`` command-line interface (pre-alpha).
+"""``edinet-replay`` command-line interface (beta).
 
 Implemented today: ``validate`` (manifest/filing against their schemas),
 ``inspect`` (a package ZIP's raw/content hashes and inventory), ``fetch``
@@ -47,7 +47,7 @@ _VALIDATE_SCHEMAS = {
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edinet-replay",
-        description="Reproducible, provenance-preserving EDINET extraction (pre-alpha).",
+        description="Reproducible, provenance-preserving EDINET extraction (beta).",
     )
     parser.add_argument("--version", action="version", version=f"edinet-replay {__version__}")
     sub = parser.add_subparsers(dest="command", metavar="<command>")
