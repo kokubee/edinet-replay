@@ -1,9 +1,9 @@
 """``edinet-replay`` command-line interface (pre-alpha).
 
 Implemented today: ``validate`` (manifest/filing against their schemas),
-``inspect`` (a package ZIP's raw/content hashes and inventory), and ``fetch``
-(document listing and package retrieval; see below). ``extract`` is declared
-but not yet implemented and exits with a clear message.
+``inspect`` (a package ZIP's raw/content hashes and inventory), ``fetch``
+(document listing and package retrieval), and ``extract`` (offline Arelle
+projection of a stored package to faithful-filing + extraction-manifest).
 
 ``fetch`` wires the existing modules together without adding policy logic:
 
@@ -14,6 +14,9 @@ but not yet implemented and exits with a clear message.
 - ``fetch --date D --edinet-code E --select latest-original-filing --store DIR``
   lists, filters, applies the named selector, downloads, and stores. Selection
   is never implicit: ``--date`` mode requires ``--list-only`` or ``--select``.
+
+``extract`` requires an explicit ``--taxonomy`` pin identifier and writes
+``faithful-filing.json`` + ``extraction-manifest.json`` under ``--output-dir``.
 
 The API key is read only from ``EDINET_API_KEY``; there is deliberately no
 ``--api-key`` flag (a key on the command line leaks into shell history and the
@@ -29,7 +32,7 @@ import zipfile
 from collections.abc import Sequence
 from pathlib import Path
 
-from . import __version__, catalog, package, schemas, selectors
+from . import __version__, catalog, extract, package, schemas, selectors
 from .client import EdinetClient
 from .exceptions import EdinetReplayError
 from .hashing import content_sha256_v1, sha256_bytes
@@ -39,7 +42,6 @@ _VALIDATE_SCHEMAS = {
     "manifest": schemas.MANIFEST_SCHEMA,
     "filing": schemas.FAITHFUL_FILING_SCHEMA,
 }
-_NOT_IMPLEMENTED = "Command not implemented in this pre-alpha release."
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -93,10 +95,52 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fetch.add_argument("--store", help="Package store directory (required when downloading).")
 
-    extract = sub.add_parser(
-        "extract", help="Produce faithful JSON from a package via Arelle (planned)."
+    extract_p = sub.add_parser(
+        "extract",
+        help="Produce faithful JSON + manifest from a package via offline Arelle.",
+        description=(
+            "Extract a faithful-filing document and an extraction-manifest from "
+            "one submission ZIP. Taxonomy identity is never implicit: pass "
+            "--taxonomy with a pin identifier (e.g. edinet-fsa-2024-11-01). "
+            "Requires the [xbrl] extra. Writes faithful-filing.json and "
+            "extraction-manifest.json under --output-dir."
+        ),
     )
-    extract.add_argument("package", nargs="?", help="Path to a stored package.")
+    extract_p.add_argument("package", help="Path to a submission ZIP.")
+    extract_p.add_argument(
+        "--taxonomy",
+        required=True,
+        help="Pinned taxonomy identifier (e.g. edinet-fsa-2024-11-01).",
+    )
+    extract_p.add_argument(
+        "--output-dir",
+        "-o",
+        required=True,
+        help="Directory for faithful-filing.json and extraction-manifest.json.",
+    )
+    extract_p.add_argument(
+        "--document-id",
+        help=(
+            "EDINET docID. Optional when the package path follows the store "
+            "layout packages/{document_id}/{raw_sha256}.zip."
+        ),
+    )
+    extract_p.add_argument(
+        "--taxonomy-zip",
+        help="Path to the taxonomy distribution ZIP (default: ~/.cache/edinet-replay/...).",
+    )
+    extract_p.add_argument(
+        "--pins-dir",
+        help="Directory of taxonomy pin JSON records (default: search path).",
+    )
+    extract_p.add_argument(
+        "--registry-dir",
+        help="Taxonomy registry directory (default: ~/.cache/edinet-replay/registry).",
+    )
+    extract_p.add_argument(
+        "--cache-root",
+        help="Isolated Arelle web-cache root (default: ~/.cache/edinet-replay/arelle-web-cache).",
+    )
 
     return parser
 
@@ -231,6 +275,44 @@ def _cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_extract(args: argparse.Namespace) -> int:
+    result = extract.extract_package(
+        args.package,
+        taxonomy_identifier=args.taxonomy,
+        document_id=args.document_id,
+        taxonomy_zip=args.taxonomy_zip,
+        pins_dir=args.pins_dir,
+        registry_dir=args.registry_dir,
+        cache_root=args.cache_root,
+        output_dir=args.output_dir,
+    )
+    payload = {
+        "document_id": result.source_package.document_id,
+        "package": {
+            "path": result.source_package.path,
+            "raw_sha256": result.source_package.raw_sha256,
+            "content_sha256": result.source_package.content_sha256,
+        },
+        "extraction_source": dict(result.manifest["extraction_source"]),
+        "taxonomy": {
+            "identifier": result.taxonomy.identifier,
+            "version": result.taxonomy.version,
+            "content_sha256": result.taxonomy.content_sha256,
+        },
+        "engine": {"name": "Arelle", "version": result.arelle_version},
+        "extractor": {"name": extract.EXTRACTOR_NAME, "version": __version__},
+        "filing": {
+            "path": result.filing_path,
+            "fact_count": len(result.filing.get("facts", {})),
+            "context_count": len(result.filing.get("contexts", {})),
+            "unit_count": len(result.filing.get("units", {})),
+        },
+        "manifest": {"path": result.manifest_path},
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -244,13 +326,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _cmd_inspect(args)
         if args.command == "fetch":
             return _cmd_fetch(args, parser)
+        if args.command == "extract":
+            return _cmd_extract(args)
     except EdinetReplayError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     except (OSError, ValueError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    raise SystemExit(f"{args.command}: {_NOT_IMPLEMENTED}")
+    parser.error(f"unknown command: {args.command}")
+    return 2
 
 
 if __name__ == "__main__":  # pragma: no cover

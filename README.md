@@ -1,6 +1,6 @@
 # EDINET Replay
 
-Toward reproducible, verifiable access to Japan's EDINET corporate disclosures — currently at the schema-and-specification stage.
+Toward reproducible, verifiable access to Japan's EDINET corporate disclosures.
 
 EDINET Replay is an open-source project for developing a reproducible, provenance-preserving extraction workflow for Japan's EDINET corporate filings.
 
@@ -8,7 +8,7 @@ It defines versioned schemas and reproducibility contracts for preserving offici
 
 The project is designed for **data engineers, quantitative researchers, XBRL implementers, ESG data users, academic researchers, financial data providers, and the data teams of institutional investors** who need verifiable access to Japanese corporate disclosures. General retail investors are unlikely to use it directly.
 
-> **Project status: pre-alpha.** EDINET Replay currently provides versioned JSON Schemas, reproducibility specifications, and validation fixtures. The extraction client and Arelle-based implementation are under development and are not production-ready.
+> **Project status: pre-alpha.** The vertical path `fetch → extract → validate` works for resolved XBRL instances against pinned FSA taxonomies. A minimal multi-standard **β corpus** (JP GAAP / IFRS / US GAAP) is published under [`corpus/`](corpus/). Inline XBRL presentation provenance and PyPI packaging are still incomplete.
 
 ## What is EDINET?
 
@@ -33,6 +33,23 @@ EDINET Replay focuses on **faithful reproduction rather than financial interpret
 - Schema and semantic validation tests
 - Documentation of the intended provenance and reproducibility model
 - An EDINET API v2 client for the daily document list and raw package download
+- CLI `fetch` / `extract` / `validate` / `inspect` — retrieve a package, project a faithful filing offline through Arelle against a pinned taxonomy, and validate both outputs
+- β corpus v1 — fixed docIDs and expected canonical hashes for one JP GAAP, one IFRS, and one US GAAP annual report ([`corpus/`](corpus/))
+
+### Vertical path (resolved XBRL)
+
+Requires `pip install -e ".[dev,xbrl]"`, an `EDINET_API_KEY`, and a pin-matching FSA taxonomy zip under `~/.cache/edinet-replay/taxonomies/<id>/1c_Taxonomy.zip` (see `taxonomies/*.json`).
+
+```console
+$ export EDINET_API_KEY=...   # never pass the key on the command line
+$ edinet-replay fetch --document-id S100W1NC --store ./store
+$ edinet-replay extract ./store/packages/S100W1NC/<raw_sha256>.zip \
+    --taxonomy edinet-fsa-2024-11-01 -o ./out
+$ edinet-replay validate filing ./out/faithful-filing.json
+$ edinet-replay validate manifest ./out/extraction-manifest.json
+```
+
+`extract` selects the preferred `.xbrl` instance from `manifest_PublicDoc.xml` (or the sole PublicDoc `.xbrl`), loads it offline, and writes `faithful-filing.json` plus `extraction-manifest.json`. Facts keep package-relative paths and line numbers back into the source ZIP. Taxonomy identity is never implicit: `--taxonomy` is required and the local zip is hash-checked against the pin.
 
 ### Retrieval example
 
@@ -81,7 +98,7 @@ EDINET Replay is intended to:
 - provide traceable references from extracted facts to elements in the original filing package; and
 - support reproducible extraction from explicitly selected and version-pinned inputs.
 
-The retrieval and faithful-representation layers are designed not to depend on a specific accounting standard. Support claims for particular JP GAAP, IFRS, or U.S. GAAP filing patterns will be documented only after they are covered by conformance fixtures and regression tests.
+The retrieval and faithful-representation layers are designed not to depend on a specific accounting standard. Conformance claims for JP GAAP, IFRS, and U.S. GAAP start from the fixed packages in the [β corpus](corpus/); broader coverage is added only with new corpus entries and golden hashes.
 
 ## What this project does not do
 

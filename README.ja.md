@@ -8,7 +8,7 @@
 
 想定利用者は、データエンジニア・クオンツ研究者・XBRL実装者・ESGデータ利用者・学術研究者・データベンダー・機関投資家のデータ担当者です。一般個人投資家が直接使うことは想定していません。
 
-> **現状: pre-alpha。** 現在提供しているのはバージョン付き JSON Schema・再現性仕様・検証用 fixture です。取得クライアントと Arelle ベースの実装は開発中で、本番利用可能な状態ではありません。
+> **現状: pre-alpha。** `fetch → extract → validate` の縦経路（解決済み XBRL・固定 taxonomy・オフライン Arelle）は動きます。βコーパス v1（JP GAAP / IFRS / US GAAP 各1件）は [`corpus/`](corpus/) にあります。iXBRL 表示層の provenance と PyPI は未完です。
 
 ## このプロジェクトの目的
 
