@@ -10,7 +10,8 @@ and computability of filings.
   [reproducibility.md](reproducibility.md)).
 - Every fact links back to the original element in the source package.
 - Versioned output schemas you can cite, independent of the code version.
-- Multi-standard coverage (JP GAAP / IFRS / US GAAP) through one retrieval base.
+- Multi-standard β corpus (JP GAAP / IFRS / US GAAP) with fixed docIDs and
+  expected canonical hashes — see [`corpus/`](../corpus/).
 
 ## What it deliberately leaves to you (and to downstream research)
 

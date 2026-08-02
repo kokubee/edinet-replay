@@ -1,0 +1,50 @@
+{
+  "corpus_id": "edinet-replay-beta-v1",
+  "schema_versions": {
+    "faithful_filing": "1.0.0",
+    "extraction_manifest": "1.0.0",
+    "canonicalization_profile": "edinet-replay-canonical-json-v1"
+  },
+  "description": "Minimal multi-standard β corpus: one JP GAAP, one IFRS, one US GAAP annual report. Artifacts under tests/golden/; taxonomy pins under taxonomies/.",
+  "entries": [
+    {
+      "id": "E04236-S100W1NC",
+      "accounting_standard": "JP GAAP",
+      "edinet_code": "E04236",
+      "document_id": "S100W1NC",
+      "submitter_name_en": "Mitsui O.S.K. Lines, Ltd.",
+      "period_end": "2025-03-31",
+      "taxonomy_identifier": "edinet-fsa-2024-11-01",
+      "taxonomy_version": "2025",
+      "golden_meta": "tests/golden/E04236-S100W1NC.json",
+      "golden_canonical_gz": "tests/golden/E04236-S100W1NC.canonical.json.gz",
+      "taxonomy_pin": "taxonomies/edinet-fsa-2024-11-01.json"
+    },
+    {
+      "id": "E00492-S100VH9B",
+      "accounting_standard": "IFRS",
+      "edinet_code": "E00492",
+      "document_id": "S100VH9B",
+      "submitter_name_en": "JAPAN TOBACCO INC.",
+      "period_end": "2024-12-31",
+      "taxonomy_identifier": "edinet-fsa-2023-12-01",
+      "taxonomy_version": "2024",
+      "golden_meta": "tests/golden/E00492-S100VH9B.json",
+      "golden_canonical_gz": "tests/golden/E00492-S100VH9B.canonical.json.gz",
+      "taxonomy_pin": "taxonomies/edinet-fsa-2023-12-01.json"
+    },
+    {
+      "id": "E01532-S100VXAI",
+      "accounting_standard": "US GAAP",
+      "edinet_code": "E01532",
+      "document_id": "S100VXAI",
+      "submitter_name_en": "KOMATSU LTD.",
+      "period_end": "2025-03-31",
+      "taxonomy_identifier": "edinet-fsa-2024-11-01",
+      "taxonomy_version": "2025",
+      "golden_meta": "tests/golden/E01532-S100VXAI.json",
+      "golden_canonical_gz": "tests/golden/E01532-S100VXAI.canonical.json.gz",
+      "taxonomy_pin": "taxonomies/edinet-fsa-2024-11-01.json"
+    }
+  ]
+}

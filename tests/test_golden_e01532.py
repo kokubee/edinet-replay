@@ -1,9 +1,7 @@
-"""Golden regression for E04236 (JP GAAP): the faithful projection is byte-stable
-across fully independent runs and matches the committed canonical hash.
+"""Golden regression for E01532 (US GAAP): faithful projection is byte-stable
+across independent runs and matches the committed canonical hash.
 
-Skipped unless the local taxonomy zip and the E04236 filing are present. The
-committed golden (metadata + deterministic gzip) is checked against its metadata
-even when regeneration is skipped.
+Skipped unless the local taxonomy zip and the E01532 filing are present.
 """
 import gzip
 import hashlib
@@ -22,35 +20,46 @@ TAXO_ZIP = HOME / ".cache/edinet-replay/taxonomies/edinet-fsa-2024-11-01/1c_Taxo
 FILINGS = pathlib.Path(os.environ.get("EDINET_REPLAY_TEST_FILINGS", ""))
 XBRL = (
     FILINGS
-    / "E04236/S100W1NC/XBRL/PublicDoc/jpcrp030000-asr-001_E04236-000_2025-03-31_01_2025-06-23.xbrl"
+    / "E01532/S100VXAI/XBRL/PublicDoc/jpcrp030000-asr-001_E01532-000_2025-03-31_01_2025-06-16.xbrl"
 )
 GOLD_DIR = pathlib.Path(__file__).resolve().parent / "golden"
-GOLD_META = json.loads((GOLD_DIR / "E04236-S100W1NC.json").read_text(encoding="utf-8"))
-GOLD_GZ = GOLD_DIR / "E04236-S100W1NC.canonical.json.gz"
+GOLD_META = json.loads((GOLD_DIR / "E01532-S100VXAI.json").read_text(encoding="utf-8"))
+GOLD_GZ = GOLD_DIR / "E01532-S100VXAI.canonical.json.gz"
 
 _needs_assets = pytest.mark.skipif(
     not (TAXO_ZIP.exists() and XBRL.exists()),
-    reason="requires local EDINET taxonomy and the E04236 filing",
+    reason="requires local EDINET taxonomy and the E01532 filing",
 )
 
 
 def _generate(tmp) -> tuple[dict, bytes]:
-    ref = taxonomy.register(TAXO_ZIP, identifier="edinet-fsa-2024-11-01", version="2025",
-                            registry_dir=tmp / "reg")
+    ref = taxonomy.register(
+        TAXO_ZIP,
+        identifier="edinet-fsa-2024-11-01",
+        version="2025",
+        registry_dir=tmp / "reg",
+    )
     extracted = tmp / "reg" / "edinet-fsa-2024-11-01" / "2025" / "extracted"
-    cfg = taxonomy.seed_arelle_web_cache(extracted, taxonomy_id=ref.identifier,
-                                         content_sha256=ref.content_sha256, cache_root=tmp / "wc")
+    cfg = taxonomy.seed_arelle_web_cache(
+        extracted,
+        taxonomy_id=ref.identifier,
+        content_sha256=ref.content_sha256,
+        cache_root=tmp / "wc",
+    )
     _, model, missing = extract.load_offline(str(XBRL), cfg)
     assert missing == []
-    filing = extract.project_faithful_filing(model, document_id="S100W1NC",
-                                             package_path="XBRL/PublicDoc/" + XBRL.name)
+    filing = extract.project_faithful_filing(
+        model,
+        document_id="S100VXAI",
+        package_path="XBRL/PublicDoc/" + XBRL.name,
+    )
     return filing, canonical.canonicalize(filing)
 
 
-def test_meta_declares_jp_gaap():
-    assert GOLD_META["accounting_standard"] == "JP GAAP"
-    assert GOLD_META["edinet_code"] == "E04236"
-    assert GOLD_META["document_id"] == "S100W1NC"
+def test_meta_declares_us_gaap():
+    assert GOLD_META["accounting_standard"] == "US GAAP"
+    assert GOLD_META["edinet_code"] == "E01532"
+    assert GOLD_META["document_id"] == "S100VXAI"
 
 
 def test_committed_golden_matches_its_metadata():
@@ -76,7 +85,6 @@ def test_generated_bytes_equal_committed_golden(tmp_path):
 
 @_needs_assets
 def test_two_independent_runs_are_byte_identical(tmp_path_factory):
-    # different temp dirs and Arelle cache roots -> proves no local path leaks in
     _, a = _generate(tmp_path_factory.mktemp("run_a"))
     _, b = _generate(tmp_path_factory.mktemp("run_b"))
     assert a == b

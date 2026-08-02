@@ -150,3 +150,109 @@ def find_public_doc(package_path: str | os.PathLike[str]) -> list[str]:
             if not i.is_dir()
             and normalize_entry_path(i.filename).startswith("XBRL/PublicDoc/")
         )
+
+
+_MANIFEST_NS = "{http://disclosure.edinet-fsa.go.jp/2013/manifest}"
+_PUBLIC_DOC_PREFIX = "XBRL/PublicDoc/"
+
+
+def infer_document_id(package_path: str | os.PathLike[str]) -> str | None:
+    """Infer a document id from the content-addressed store layout.
+
+    Recognizes ``.../packages/{document_id}/{raw_sha256}.zip`` (the layout
+    written by :func:`store`). Returns ``None`` when the path does not match.
+    """
+    path = Path(package_path)
+    if path.parent.parent.name != "packages":
+        return None
+    doc_id = path.parent.name
+    if not doc_id or doc_id in {".", ".."}:
+        return None
+    return doc_id
+
+
+def source_package_from_path(
+    package_path: str | os.PathLike[str],
+    *,
+    document_id: str,
+    retrieved_at: str | None = None,
+) -> SourcePackage:
+    """Build a :class:`SourcePackage` from an on-disk ZIP without re-storing it."""
+    path = Path(package_path)
+    raw = path.read_bytes()
+    content_hash, entries = inventory(raw)
+    return SourcePackage(
+        document_id=document_id,
+        path=str(path.resolve()),
+        raw_sha256=sha256_bytes(raw),
+        content_sha256=content_hash,
+        size_bytes=len(raw),
+        retrieved_at=retrieved_at,
+        entries=entries,
+    )
+
+
+def select_preferred_xbrl(extracted_dir: str | os.PathLike[str]) -> tuple[str, dict]:
+    """Choose the preferred resolved XBRL instance under ``XBRL/PublicDoc/``.
+
+    Selection order (deterministic, never implicit when ambiguous):
+
+    1. ``manifest_PublicDoc.xml`` ``instance@preferredFilename`` when present
+       and the file exists.
+    2. Exactly one ``*.xbrl`` file under PublicDoc.
+
+    Returns ``(package_relative_path, extraction_source)`` where
+    ``extraction_source`` is suitable for an extraction-manifest
+    ``extraction_source`` object (``kind`` = ``xbrl-instance``).
+    """
+    import xml.etree.ElementTree as ET
+
+    root = Path(extracted_dir)
+    public = root / "XBRL" / "PublicDoc"
+    if not public.is_dir():
+        raise PackageValidationError(
+            f"package has no XBRL/PublicDoc/ directory under {root}"
+        )
+
+    manifest_path = public / "manifest_PublicDoc.xml"
+    if manifest_path.is_file():
+        try:
+            tree = ET.parse(manifest_path)
+        except ET.ParseError as exc:
+            raise PackageValidationError(
+                f"unreadable manifest_PublicDoc.xml: {exc}"
+            ) from exc
+        for inst in tree.getroot().iter(_MANIFEST_NS + "instance"):
+            preferred = (inst.get("preferredFilename") or "").strip()
+            if not preferred:
+                continue
+            # preferredFilename is a bare basename inside PublicDoc.
+            candidate = public / preferred
+            if not candidate.is_file():
+                raise PackageValidationError(
+                    f"manifest preferredFilename {preferred!r} not found under "
+                    f"XBRL/PublicDoc/"
+                )
+            rel = _PUBLIC_DOC_PREFIX + preferred
+            return rel, {
+                "kind": "xbrl-instance",
+                "package_path": rel,
+                "selected_from_manifest": True,
+                "preferred_filename": True,
+            }
+
+    xbrls = sorted(p.name for p in public.iterdir() if p.is_file() and p.suffix == ".xbrl")
+    if len(xbrls) == 1:
+        rel = _PUBLIC_DOC_PREFIX + xbrls[0]
+        return rel, {
+            "kind": "xbrl-instance",
+            "package_path": rel,
+            "selected_from_manifest": False,
+            "preferred_filename": False,
+        }
+    if not xbrls:
+        raise PackageValidationError("no .xbrl instance under XBRL/PublicDoc/")
+    raise PackageValidationError(
+        "multiple .xbrl instances under XBRL/PublicDoc/ and no usable "
+        f"manifest preferredFilename: {xbrls}"
+    )

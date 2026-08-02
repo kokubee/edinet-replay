@@ -1,4 +1,4 @@
-"""Smoke tests: the package imports, and the CLI validate/inspect/skeleton run."""
+"""Smoke tests: the package imports, and the CLI validate/inspect/extract run."""
 import importlib
 import io
 import pathlib
@@ -27,7 +27,7 @@ MODULES = [
 
 
 def test_version():
-    assert __version__ == "0.1.0a1"
+    assert __version__ == "0.1.0a2"
 
 
 @pytest.mark.parametrize("name", MODULES)
@@ -66,11 +66,8 @@ def test_cli_inspect_reports_hashes(tmp_path, capsys):
     assert "raw_sha256" in out and "content_sha256" in out
 
 
-def test_cli_fetch_is_not_implemented():
-    with pytest.raises(SystemExit):
-        cli.main(["fetch", "--date", "2026-07-01"])
-
-
-def test_cli_extract_is_not_implemented():
-    with pytest.raises(SystemExit):
-        cli.main(["extract", "some-package"])
+def test_cli_extract_help_lists_taxonomy(capsys):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["extract", "--help"])
+    assert exc.value.code == 0
+    assert "--taxonomy" in capsys.readouterr().out

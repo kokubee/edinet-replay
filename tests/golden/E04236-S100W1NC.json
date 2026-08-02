@@ -1,5 +1,11 @@
 {
+  "accounting_standard": "JP GAAP",
+  "edinet_code": "E04236",
   "document_id": "S100W1NC",
+  "submitter_name_en": "Mitsui O.S.K. Lines, Ltd.",
+  "period_end": "2025-03-31",
+  "taxonomy_identifier": "edinet-fsa-2024-11-01",
+  "taxonomy_version": "2025",
   "source_raw_sha256": "36eabd861a975e3f2893508d259185627a1cadd25d8bf3de5e33e28a5f9a7c35",
   "source_content_sha256": "cfee5f82993d75f7446e57ece65ca80b51668935b389d42dfb42a5278cfe650a",
   "taxonomy_raw_sha256": "70abacbac7b9d897dc794faadb4a2be46775f618ab79a8888622847a4d62ae90",
@@ -14,5 +20,6 @@
   "unit_count": 4,
   "footnote_relationship_count": 127,
   "canonical_output_sha256": "cc3609f0128abdaa798316e4f8112e7b41e9653e08919f9e068cd5cc52e64f5f",
-  "canonical_output_size_bytes": 8952396
+  "canonical_output_size_bytes": 8952396,
+  "preferred_xbrl": "XBRL/PublicDoc/jpcrp030000-asr-001_E04236-000_2025-03-31_01_2025-06-23.xbrl"
 }

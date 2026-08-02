@@ -5,7 +5,11 @@ import zipfile
 import pytest
 
 from edinet_replay import package
-from edinet_replay.exceptions import PackageConflictError, UnsafeArchiveError
+from edinet_replay.exceptions import (
+    PackageConflictError,
+    PackageValidationError,
+    UnsafeArchiveError,
+)
 
 GOOD = [
     ("XBRL/PublicDoc/a.xbrl", b"<xbrl>a</xbrl>"),
@@ -107,3 +111,54 @@ def test_find_public_doc(tmp_path):
         "XBRL/PublicDoc/a.xbrl",
         "XBRL/PublicDoc/b.htm",
     ]
+
+
+def test_infer_document_id_from_store_layout(tmp_path):
+    store = tmp_path / "packages" / "S100W1NC" / ("a" * 64 + ".zip")
+    store.parent.mkdir(parents=True)
+    store.write_bytes(b"x")
+    assert package.infer_document_id(store) == "S100W1NC"
+    assert package.infer_document_id(tmp_path / "other.zip") is None
+
+
+def test_select_preferred_xbrl_from_manifest(tmp_path):
+    public = tmp_path / "XBRL" / "PublicDoc"
+    public.mkdir(parents=True)
+    (public / "chosen.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    (public / "other.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    (public / "manifest_PublicDoc.xml").write_text(
+        """<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://disclosure.edinet-fsa.go.jp/2013/manifest">
+  <list>
+    <instance preferredFilename="chosen.xbrl"/>
+  </list>
+</manifest>
+""",
+        encoding="utf-8",
+    )
+    rel, meta = package.select_preferred_xbrl(tmp_path)
+    assert rel == "XBRL/PublicDoc/chosen.xbrl"
+    assert meta == {
+        "kind": "xbrl-instance",
+        "package_path": rel,
+        "selected_from_manifest": True,
+        "preferred_filename": True,
+    }
+
+
+def test_select_preferred_xbrl_single_file_fallback(tmp_path):
+    public = tmp_path / "XBRL" / "PublicDoc"
+    public.mkdir(parents=True)
+    (public / "only.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    rel, meta = package.select_preferred_xbrl(tmp_path)
+    assert rel == "XBRL/PublicDoc/only.xbrl"
+    assert meta["selected_from_manifest"] is False
+
+
+def test_select_preferred_xbrl_rejects_ambiguous(tmp_path):
+    public = tmp_path / "XBRL" / "PublicDoc"
+    public.mkdir(parents=True)
+    (public / "a.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    (public / "b.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    with pytest.raises(PackageValidationError, match="multiple"):
+        package.select_preferred_xbrl(tmp_path)

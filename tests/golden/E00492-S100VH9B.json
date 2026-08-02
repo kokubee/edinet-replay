@@ -2,6 +2,10 @@
   "accounting_standard": "IFRS",
   "edinet_code": "E00492",
   "document_id": "S100VH9B",
+  "submitter_name_en": "JAPAN TOBACCO INC.",
+  "period_end": "2024-12-31",
+  "taxonomy_identifier": "edinet-fsa-2023-12-01",
+  "taxonomy_version": "2024",
   "source_raw_sha256": "881181f95ae8f08b8224ab650d55bb9bda85c24608141ed358232000b4464c6d",
   "source_content_sha256": "368fb4e322f5e54a6ed26b166340579ce33a9d935085aeb459c0c2a78a5756e2",
   "taxonomy_raw_sha256": "75b307274f80e05b4ee4d2f6193dfde7b7bc91c4858d4b0afea41343814f9af9",
@@ -16,5 +20,6 @@
   "unit_count": 5,
   "footnote_relationship_count": 44,
   "canonical_output_sha256": "1e7bc374178730ede7050bc78f64add0b826e3cb612f7869b9919322b8d3c21b",
-  "canonical_output_size_bytes": 8032500
+  "canonical_output_size_bytes": 8032500,
+  "preferred_xbrl": "XBRL/PublicDoc/jpcrp030000-asr-001_E00492-000_2024-12-31_01_2025-03-26.xbrl"
 }

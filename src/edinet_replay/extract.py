@@ -8,14 +8,27 @@ It does NOT synthesize iXBRL presentation provenance (lexical text, display,
 transform/scale/sign, per-page location): those fields are OMITTED, and
 ``provenance_capabilities`` records that they were not extracted. The inline
 document set adds them in a later commit.
+
+:func:`extract_package` is the end-to-end orchestrator used by the CLI:
+package ZIP → preferred ``.xbrl`` instance → offline Arelle load against a
+pinned taxonomy → faithful-filing JSON + extraction-manifest.
 """
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import re
+import shutil
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Protocol
 
-from .exceptions import ExtractionError
+from . import __version__
+from . import schemas as schema_mod
+from .exceptions import ConfigurationError, ExtractionError
 from .hashing import CONTENT_HASH_ALGORITHM
 from .models import (
     ExtractionConfiguration,
@@ -25,11 +38,19 @@ from .models import (
     SourcePackage,
     TaxonomyPackage,
 )
-from .taxonomy import OfflineArelleConfig
+from .package import (
+    extract_safe,
+    infer_document_id,
+    select_preferred_xbrl,
+    source_package_from_path,
+)
+from .taxonomy import OfflineArelleConfig, prepare_offline_taxonomy
 
 FAITHFUL_FILING_SCHEMA_VERSION = "1.0.0"
 MANIFEST_SCHEMA_VERSION = "1.0.0"
 EXTRACTOR_NAME = "edinet-replay"
+FILING_FILENAME = "faithful-filing.json"
+MANIFEST_FILENAME = "extraction-manifest.json"
 
 _XBRLI = "http://www.xbrl.org/2003/instance"
 
@@ -376,3 +397,168 @@ def build_manifest(
         "extraction_source": extraction_source,
         "generated_at": generated_at,
     }
+
+
+@dataclass(frozen=True)
+class ExtractArtifacts:
+    """Outputs of one :func:`extract_package` run."""
+
+    filing: FaithfulFiling
+    manifest: ExtractionManifest
+    source_package: SourcePackage
+    taxonomy: TaxonomyPackage
+    package_path_in_archive: str
+    arelle_version: str
+    filing_path: str | None = None
+    manifest_path: str | None = None
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _write_json(path: Path, document: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def extract_package(
+    package_path: str | os.PathLike[str],
+    *,
+    taxonomy_identifier: str,
+    document_id: str | None = None,
+    selection: SelectionRecord | None = None,
+    taxonomy_zip: str | os.PathLike[str] | None = None,
+    pins_dir: str | os.PathLike[str] | None = None,
+    registry_dir: str | os.PathLike[str] | None = None,
+    cache_root: str | os.PathLike[str] | None = None,
+    output_dir: str | os.PathLike[str] | None = None,
+    work_dir: str | os.PathLike[str] | None = None,
+    generated_at: str | None = None,
+    extractor_version: str | None = None,
+    retrieved_at: str | None = None,
+    validate: bool = True,
+) -> ExtractArtifacts:
+    """Extract a faithful filing + manifest from one submission ZIP.
+
+    Requires the ``[xbrl]`` extra (Arelle + lxml). Taxonomy identity is never
+    implicit: ``taxonomy_identifier`` must name a pin record, and the local
+    taxonomy zip must match that pin's hashes.
+
+    When ``output_dir`` is set, writes ``faithful-filing.json`` and
+    ``extraction-manifest.json`` there after optional schema validation.
+    """
+    path = Path(package_path)
+    if not path.is_file():
+        raise ExtractionError(f"package not found: {path}")
+
+    doc_id = document_id or infer_document_id(path)
+    if not doc_id:
+        raise ConfigurationError(
+            "document_id is required (pass document_id= or use a store path "
+            "packages/{document_id}/{raw_sha256}.zip)"
+        )
+
+    try:
+        import arelle  # noqa: F401
+        from arelle import Version
+    except ImportError as exc:
+        raise ConfigurationError(
+            "Arelle is required for extract; install with "
+            'pip install "edinet-replay[xbrl]"'
+        ) from exc
+
+    source = source_package_from_path(
+        path, document_id=doc_id, retrieved_at=retrieved_at
+    )
+    tax_ref, offline_cfg, _pin = prepare_offline_taxonomy(
+        taxonomy_identifier,
+        taxonomy_zip=taxonomy_zip,
+        pins_dir=pins_dir,
+        registry_dir=registry_dir,
+        cache_root=cache_root,
+    )
+
+    own_work = work_dir is None
+    if work_dir is not None:
+        work = Path(work_dir)
+    else:
+        work = Path(tempfile.mkdtemp(prefix="edinet-replay-"))
+    try:
+        extracted_root = work / "package"
+        if extracted_root.exists():
+            shutil.rmtree(extracted_root)
+        extract_safe(path, extracted_root)
+        rel_path, extraction_source = select_preferred_xbrl(extracted_root)
+        entry = extracted_root / rel_path
+        if not entry.is_file():
+            raise ExtractionError(f"selected entry missing after extract: {rel_path}")
+
+        _cntlr, model, missing = load_offline(str(entry), offline_cfg)
+        if model is None:
+            raise ExtractionError(
+                f"Arelle failed to load {rel_path}"
+                + (f"; missing DTS urls: {missing}" if missing else "")
+            )
+        if missing:
+            raise ExtractionError(
+                f"offline DTS resolution incomplete for {rel_path}; "
+                f"missing: {missing}"
+            )
+
+        filing = project_faithful_filing(
+            model, document_id=doc_id, package_path=rel_path
+        )
+        when = generated_at or _utc_now()
+        sel = selection or SelectionRecord(
+            selected_by="explicit_document",
+            selector_version="0",
+            selected_document_id=doc_id,
+            candidate_document_ids=[doc_id],
+            parameters={},
+        )
+        if sel.selected_document_id != doc_id:
+            raise ConfigurationError(
+                f"selection.selected_document_id {sel.selected_document_id!r} "
+                f"!= document_id {doc_id!r}"
+            )
+        arelle_version = Version.__version__
+        ext_ver = extractor_version or __version__
+        manifest = build_manifest(
+            source,
+            tax_ref,
+            sel,
+            arelle_version=arelle_version,
+            extractor_version=ext_ver,
+            extraction_source=extraction_source,
+            generated_at=when,
+        )
+
+        if validate:
+            schema_mod.validate(filing, schema_mod.FAITHFUL_FILING_SCHEMA)
+            schema_mod.validate(manifest, schema_mod.MANIFEST_SCHEMA)
+
+        filing_path = manifest_path = None
+        if output_dir is not None:
+            out = Path(output_dir)
+            filing_path = str(out / FILING_FILENAME)
+            manifest_path = str(out / MANIFEST_FILENAME)
+            _write_json(Path(filing_path), dict(filing))
+            _write_json(Path(manifest_path), dict(manifest))
+
+        return ExtractArtifacts(
+            filing=filing,
+            manifest=manifest,
+            source_package=source,
+            taxonomy=tax_ref,
+            package_path_in_archive=rel_path,
+            arelle_version=arelle_version,
+            filing_path=filing_path,
+            manifest_path=manifest_path,
+        )
+    finally:
+        if own_work and work.exists():
+            shutil.rmtree(work, ignore_errors=True)

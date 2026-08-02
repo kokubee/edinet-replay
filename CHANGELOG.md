@@ -4,6 +4,30 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and versions follow
 [PEP 440](https://peps.python.org/pep-0440/) / semantic versioning.
 
+## [Unreleased]
+
+### Added
+
+- CLI ``extract`` and the ``extract.extract_package`` orchestrator: given an
+  explicit submission ZIP and a pinned taxonomy identifier, select the preferred
+  ``.xbrl`` instance (from ``manifest_PublicDoc.xml`` preferredFilename, else
+  the sole PublicDoc ``.xbrl``), load it offline through Arelle against a
+  hash-verified taxonomy, write ``faithful-filing.json`` +
+  ``extraction-manifest.json``, and schema-validate both. Taxonomy identity is
+  never implicit (``--taxonomy`` required). Completes the
+  ``fetch → extract → validate`` vertical path for resolved XBRL.
+- **β corpus v1** (`corpus/beta-v1/`): one JP GAAP (E04236/S100W1NC), one IFRS
+  (E00492/S100VH9B), one US GAAP (E01532/S100VXAI) entry with fixed docIDs,
+  dual package hashes, taxonomy pins, and committed canonical outputs under
+  `tests/golden/`. Catalog integrity tests run without local filings.
+- README leads with a 30-second demo (GIF + commands + fact traced to ZIP line
+  4943). Regenerator: `tools/render_demo_gif.py`.
+
+### Fixed
+
+- Package ``__version__`` now matches ``0.1.0a2`` (was still ``0.1.0a1`` after
+  the alpha.2 cut).
+
 ## [0.1.0-alpha.2] — 2026-07-21
 
 Pre-alpha. `0.1.0-alpha.1` was tagged on 2026-07-12, before the EDINET API v2
@@ -13,7 +37,7 @@ Otherwise the scope is unchanged.
 First pre-alpha. The output contracts and reproducibility model are defined; the
 resolved-XBRL projection works end to end offline, and `fetch` now retrieves,
 selects, and stores real filings through the live EDINET API. The inline (iXBRL)
-presentation layer and CLI `extract` are not yet implemented.
+presentation layer is not yet implemented.
 
 ### Added
 
@@ -32,8 +56,8 @@ presentation layer and CLI `extract` are not yet implemented.
   explicit/typed dimensions, unit, decimals/precision, nil, language, footnotes,
   and source location. iXBRL presentation provenance is deferred.
 - CLI: `validate` (manifest/filing) and `inspect` (package hashes/inventory).
-  `fetch` is implemented (see below); `extract` is declared but not yet
-  implemented.
+  `fetch` is implemented (see below); `extract` landed after this tag (see
+  Unreleased).
 - Golden regressions for E04236 (JP GAAP) and E00492 (IFRS), byte-stable across
   independent runs.
 - Live EDINET API v2 client: `EdinetClient.list_documents()` /
@@ -68,6 +92,6 @@ presentation layer and CLI `extract` are not yet implemented.
 
 ### Known limitations
 
-- No CLI `extract` yet, and no inline-XBRL document-set extraction (no
-  lexical/display/transform provenance).
+- No inline-XBRL document-set extraction (no lexical/display/transform
+  provenance). CLI `extract` projects the resolved XBRL instance only.
 - Real-data golden tests require local EDINET filings and taxonomy packages.
