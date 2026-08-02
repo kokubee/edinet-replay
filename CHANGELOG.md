@@ -20,6 +20,8 @@ All notable changes to this project are documented here. The format is based on
   (E00492/S100VH9B), one US GAAP (E01532/S100VXAI) entry with fixed docIDs,
   dual package hashes, taxonomy pins, and committed canonical outputs under
   `tests/golden/`. Catalog integrity tests run without local filings.
+- README leads with a 30-second demo (GIF + commands + fact traced to ZIP line
+  4943). Regenerator: `tools/render_demo_gif.py`.
 
 ### Fixed
 
