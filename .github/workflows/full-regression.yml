@@ -1,0 +1,55 @@
+name: Full regression
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  beta-corpus:
+    # Keep public PR CI data-free. Enable this protected-branch job only after
+    # EDINET_API_KEY is configured as a repository secret.
+    if: ${{ vars.EDINET_REPLAY_FULL_REGRESSION == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+      EDINET_REPLAY_LIVE_API_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -U pip
+      - run: pip install -e ".[dev,xbrl]"
+      - name: Download pinned taxonomies and beta corpus source packages
+        run: |
+          set -euo pipefail
+          test -n "$EDINET_API_KEY"
+          python - <<'PY'
+          import json
+          import pathlib
+          import urllib.request
+
+          root = pathlib.Path.cwd()
+          cache = pathlib.Path.home() / ".cache/edinet-replay/taxonomies"
+          for pin_path in (root / "taxonomies").glob("*.json"):
+              pin = json.loads(pin_path.read_text(encoding="utf-8"))
+              target = cache / pin["identifier"] / "1c_Taxonomy.zip"
+              target.parent.mkdir(parents=True, exist_ok=True)
+              urllib.request.urlretrieve(pin["source_url"], target)
+          PY
+          filings="$RUNNER_TEMP/edinet-filings"
+          mkdir -p "$filings"
+          for entry in E04236:S100W1NC E00492:S100VH9B E01532:S100VXAI; do
+            code="${entry%%:*}"
+            document="${entry##*:}"
+            record=$(edinet-replay fetch --document-id "$document" --store "$RUNNER_TEMP/store")
+            package=$(python -c 'import json,sys; print(json.load(sys.stdin)["package"]["path"])' <<<"$record")
+            mkdir -p "$filings/$code"
+            cp "$package" "$filings/$code/$document.zip"
+          done
+          echo "EDINET_REPLAY_TEST_FILINGS=$filings" >> "$GITHUB_ENV"
+      - run: ruff check .
+      - run: pytest -q -ra

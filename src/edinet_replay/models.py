@@ -84,6 +84,18 @@ class SelectionRecord:
 
 
 @dataclass(frozen=True)
+class AcquisitionRecord:
+    """Retrieval provenance bound to one content-addressed source package."""
+
+    document_id: str
+    raw_sha256: str
+    content_sha256: str
+    retrieved_at: str
+    api_version: str
+    selection: SelectionRecord
+
+
+@dataclass(frozen=True)
 class PackageEntry:
     path: str
     sha256: str

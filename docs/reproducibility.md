@@ -15,6 +15,14 @@ source content_sha256
 Timestamps (`retrieved_at`, `generated_at`) and tool `extensions` are provenance
 only and belong to **no** identity.
 
+## Acquisition record
+
+The retrieval layer writes `<raw_sha256>.acquisition.json` beside every stored
+ZIP. It is bound to the ZIP's document ID and both hashes, and records the
+actual EDINET retrieval timestamp, API version, and explicit selection record.
+`extract` carries that record into the manifest automatically. It must not use
+the extraction timestamp as a substitute for an unknown retrieval time.
+
 ## Two identities, kept separate
 
 - **Selection identity** — given the same candidate set, was the same document

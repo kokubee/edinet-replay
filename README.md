@@ -35,6 +35,12 @@ What you get:
 | `./out/extraction-manifest.json` | Reproduction identity: dual package hashes, taxonomy pin, engine, selection |
 | each fact's `source.package_path` + `source.line` | Pointer back into the official ZIP |
 
+`fetch` writes an immutable `<raw_sha256>.acquisition.json` sidecar beside the ZIP.
+It binds the package hashes to the real EDINET retrieval time, API version, and
+explicit document-selection record; `extract` loads it automatically. For a ZIP
+obtained outside `fetch`, pass a verified `--retrieved-at` value or an explicit
+`--acquisition-record`. Extraction time is never substituted for retrieval time.
+
 Example fact from this filing (value is a **string**, as reported):
 
 ```json

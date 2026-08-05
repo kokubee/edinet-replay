@@ -121,6 +121,19 @@ def test_fetch_document_id_stores_package_and_prints_record(stub_client, tmp_pat
     stored = tmp_path / "packages" / "S100AAA1" / f"{sha256_bytes(ZIP_BYTES)}.zip"
     assert stored.is_file()
     assert stored.read_bytes() == ZIP_BYTES
+    acquisition = stored.with_suffix(".acquisition.json")
+    assert record["acquisition_record"] == str(acquisition)
+    assert json.loads(acquisition.read_text(encoding="utf-8")) == {
+        "acquisition_schema_version": "1.0.0",
+        "document_id": "S100AAA1",
+        "raw_sha256": sha256_bytes(ZIP_BYTES),
+        "content_sha256": record["package"]["content_sha256"],
+        "retrieval": {
+            "retrieved_at": "2026-07-12T12:00:01Z",
+            "api_version": "v2",
+        },
+        "selection": record["selection"],
+    }
 
 
 def test_fetch_document_id_requires_store(stub_client, capsys):

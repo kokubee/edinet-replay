@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+
+- Immutable acquisition records beside content-addressed ZIPs. `fetch` now
+  persists the actual EDINET retrieval time, API version, package hashes, and
+  explicit selection record; `extract` verifies and carries that provenance
+  into the manifest instead of substituting extraction time for retrieval time.
+
 ## [0.1.0-beta.1] — 2026-08-02
 
 First **beta**. The β completion bar is met for resolved XBRL: an explicit
