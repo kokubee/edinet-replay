@@ -9,20 +9,29 @@ Directory entries are excluded from the content hash and the inventory.
 from __future__ import annotations
 
 import io
+import json
 import os
 import stat
 import zipfile
+from dataclasses import asdict
 from pathlib import Path
+from typing import Any
 
-from .exceptions import PackageConflictError, PackageValidationError, UnsafeArchiveError
+from .exceptions import (
+    ConfigurationError,
+    PackageConflictError,
+    PackageValidationError,
+    UnsafeArchiveError,
+)
 from .hashing import content_sha256_v1, normalize_entry_path, sha256_bytes
-from .models import PackageEntry, SourcePackage
+from .models import AcquisitionRecord, PackageEntry, SelectionRecord, SourcePackage
 
 # Zip-bomb guardrails (defaults; override per call).
 DEFAULT_MAX_ENTRIES = 10_000
 DEFAULT_MAX_TOTAL_BYTES = 2 * 1024**3  # 2 GiB
 DEFAULT_MAX_FILE_BYTES = 512 * 1024**2  # 512 MiB
 DEFAULT_MAX_RATIO = 200  # uncompressed / compressed
+ACQUISITION_RECORD_SUFFIX = ".acquisition.json"
 
 
 def _file_entries(data: bytes) -> list[tuple[str, bytes, int]]:
@@ -83,6 +92,105 @@ def store(
         retrieved_at=retrieved_at,
         entries=entries,
     )
+
+
+def acquisition_record_path(package_path: str | os.PathLike[str]) -> Path:
+    """Return the sidecar path reserved for one content-addressed ZIP."""
+    path = Path(package_path)
+    if path.suffix != ".zip":
+        raise ConfigurationError(f"acquisition records require a .zip package path: {path}")
+    return path.with_suffix(ACQUISITION_RECORD_SUFFIX)
+
+
+def _acquisition_document(record: AcquisitionRecord) -> dict[str, Any]:
+    return {
+        "acquisition_schema_version": "1.0.0",
+        "document_id": record.document_id,
+        "raw_sha256": record.raw_sha256,
+        "content_sha256": record.content_sha256,
+        "retrieval": {
+            "retrieved_at": record.retrieved_at,
+            "api_version": record.api_version,
+        },
+        "selection": asdict(record.selection),
+    }
+
+
+def write_acquisition_record(
+    package: SourcePackage,
+    *,
+    api_version: str,
+    selection: SelectionRecord,
+) -> Path:
+    """Write immutable retrieval provenance beside ``package``.
+
+    Repeated writes of identical evidence are safe. Differing evidence for the
+    same raw package is rejected rather than silently overwritten.
+    """
+    if not package.retrieved_at:
+        raise ConfigurationError("cannot record an acquisition without retrieved_at")
+    record = AcquisitionRecord(
+        document_id=package.document_id,
+        raw_sha256=package.raw_sha256,
+        content_sha256=package.content_sha256,
+        retrieved_at=package.retrieved_at,
+        api_version=api_version,
+        selection=selection,
+    )
+    path = acquisition_record_path(package.path)
+    body = json.dumps(_acquisition_document(record), ensure_ascii=False, indent=2) + "\n"
+    if path.exists():
+        if path.read_text(encoding="utf-8") != body:
+            raise PackageConflictError(f"acquisition record at {path} differs from new evidence")
+        return path
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(body, encoding="utf-8")
+    os.replace(temporary, path)
+    return path
+
+
+def load_acquisition_record(
+    record_path: str | os.PathLike[str],
+    *,
+    package: SourcePackage,
+) -> AcquisitionRecord:
+    """Load an acquisition record and verify that it belongs to ``package``."""
+    path = Path(record_path)
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        retrieval = value["retrieval"]
+        selection_value = value["selection"]
+        selection = SelectionRecord(
+            selected_by=selection_value["selected_by"],
+            selector_version=selection_value["selector_version"],
+            selected_document_id=selection_value["selected_document_id"],
+            candidate_document_ids=list(selection_value["candidate_document_ids"]),
+            parameters=selection_value["parameters"],
+        )
+        record = AcquisitionRecord(
+            document_id=value["document_id"],
+            raw_sha256=value["raw_sha256"],
+            content_sha256=value["content_sha256"],
+            retrieved_at=retrieval["retrieved_at"],
+            api_version=retrieval["api_version"],
+            selection=selection,
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ConfigurationError(f"invalid acquisition record: {path}") from exc
+
+    if value.get("acquisition_schema_version") != "1.0.0":
+        raise ConfigurationError(f"unsupported acquisition record version: {path}")
+    if (
+        record.document_id != package.document_id
+        or record.raw_sha256 != package.raw_sha256
+        or record.content_sha256 != package.content_sha256
+    ):
+        raise ConfigurationError(f"acquisition record does not match package bytes: {path}")
+    if record.selection.selected_document_id != package.document_id:
+        raise ConfigurationError(
+            f"acquisition selection does not match package document_id: {path}"
+        )
+    return record
 
 
 def _is_symlink(info: zipfile.ZipInfo) -> bool:

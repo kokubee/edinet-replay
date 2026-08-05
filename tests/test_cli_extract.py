@@ -73,6 +73,29 @@ def test_extract_package_requires_document_id(tmp_path):
         )
 
 
+def test_extract_package_requires_acquisition_or_verified_retrieval_time(tmp_path):
+    import io
+    import zipfile
+
+    from edinet_replay import extract
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("XBRL/PublicDoc/a.xbrl", b"<xbrl/>")
+    zpath = tmp_path / "loose.zip"
+    zpath.write_bytes(buf.getvalue())
+
+    with pytest.raises(ConfigurationError, match="no acquisition record"):
+        extract.extract_package(
+            zpath,
+            taxonomy_identifier=TAXO_ID,
+            document_id="S100W1NC",
+            pins_dir=ROOT / "taxonomies",
+            registry_dir=tmp_path / "reg",
+            cache_root=tmp_path / "wc",
+        )
+
+
 @_needs_assets
 def test_cli_extract_e04236_end_to_end(tmp_path, capsys):
     store = tmp_path / "store"
@@ -80,10 +103,25 @@ def test_cli_extract_e04236_end_to_end(tmp_path, capsys):
     dest = store / "packages" / "S100W1NC"
     dest.mkdir(parents=True)
     raw = RAW_ZIP.read_bytes()
+    from edinet_replay import package
     from edinet_replay.hashing import sha256_bytes
+    from edinet_replay.models import SelectionRecord
 
     zpath = dest / f"{sha256_bytes(raw)}.zip"
     shutil.copyfile(RAW_ZIP, zpath)
+    source = package.source_package_from_path(
+        zpath, document_id="S100W1NC", retrieved_at="2025-06-27T00:00:00Z"
+    )
+    package.write_acquisition_record(
+        source,
+        api_version="v2",
+        selection=SelectionRecord(
+            selected_by="explicit_document",
+            selector_version="0",
+            selected_document_id="S100W1NC",
+            candidate_document_ids=["S100W1NC"],
+        ),
+    )
 
     out = tmp_path / "out"
     rc = cli.main(
@@ -118,6 +156,7 @@ def test_cli_extract_e04236_end_to_end(tmp_path, capsys):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     schemas.validate(filing, schemas.FAITHFUL_FILING_SCHEMA)
     schemas.validate(manifest, schemas.MANIFEST_SCHEMA)
+    assert manifest["source_package"]["retrieved_at"] == "2025-06-27T00:00:00Z"
 
     assert cli.main(["validate", "filing", str(filing_path)]) == 0
     assert cli.main(["validate", "manifest", str(manifest_path)]) == 0

@@ -117,3 +117,11 @@ export EDINET_REPLAY_PINS_DIR=/path/to/edinet-replay/taxonomies   # for extract
 ```
 
 Follow-up (not done for this cut): configure PyPI **Trusted Publisher** (GitHub OIDC) so later uploads need no long-lived API token on a laptop.
+
+## Full beta-corpus regression
+
+`.github/workflows/full-regression.yml` is deliberately separate from public PR
+CI: it downloads the pinned FSA taxonomy archives and real EDINET packages, then
+runs the live-client and three-accounting-standard golden regressions. Before it
+can run, add repository secret `EDINET_API_KEY` and set repository variable
+`EDINET_REPLAY_FULL_REGRESSION=true`. Fork PRs never receive the secret.

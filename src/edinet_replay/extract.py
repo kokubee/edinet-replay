@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Protocol
 
 from . import __version__
+from . import package as package_mod
 from . import schemas as schema_mod
 from .exceptions import ConfigurationError, ExtractionError
 from .hashing import CONTENT_HASH_ALGORITHM
@@ -353,13 +354,17 @@ def build_manifest(
             item["size_bytes"] = e.size_bytes
         entries.append(item)
 
+    if not package.retrieved_at:
+        raise ConfigurationError(
+            "source package retrieved_at is required for an extraction manifest"
+        )
     source_package: dict = {
         "document_id": package.document_id,
         "raw_sha256": package.raw_sha256,
         "content_sha256": package.content_sha256,
         "content_hash_algorithm": CONTENT_HASH_ALGORITHM,
         "media_type": package.media_type,
-        "retrieved_at": package.retrieved_at or generated_at,
+        "retrieved_at": package.retrieved_at,
     }
     if package.size_bytes is not None:
         source_package["size_bytes"] = package.size_bytes
@@ -431,6 +436,7 @@ def extract_package(
     taxonomy_identifier: str,
     document_id: str | None = None,
     selection: SelectionRecord | None = None,
+    acquisition_record_path: str | os.PathLike[str] | None = None,
     taxonomy_zip: str | os.PathLike[str] | None = None,
     pins_dir: str | os.PathLike[str] | None = None,
     registry_dir: str | os.PathLike[str] | None = None,
@@ -462,6 +468,33 @@ def extract_package(
             "packages/{document_id}/{raw_sha256}.zip)"
         )
 
+    source = source_package_from_path(path, document_id=doc_id, retrieved_at=retrieved_at)
+    record_path = (
+        Path(acquisition_record_path)
+        if acquisition_record_path is not None
+        else package_mod.acquisition_record_path(path)
+    )
+    acquisition = (
+        package_mod.load_acquisition_record(record_path, package=source)
+        if record_path.is_file()
+        else None
+    )
+    if acquisition is not None:
+        source = source_package_from_path(
+            path, document_id=doc_id, retrieved_at=acquisition.retrieved_at
+        )
+        if selection is None:
+            selection = acquisition.selection
+        elif selection != acquisition.selection:
+            raise ConfigurationError(
+                "selection conflicts with acquisition record; provenance records are immutable"
+            )
+    elif source.retrieved_at is None:
+        raise ConfigurationError(
+            "no acquisition record found; pass retrieved_at= with a verified retrieval timestamp "
+            "or provide acquisition_record_path"
+        )
+
     try:
         import arelle  # noqa: F401
         from arelle import Version
@@ -470,10 +503,6 @@ def extract_package(
             "Arelle is required for extract; install with "
             'pip install "edinet-replay[xbrl]"'
         ) from exc
-
-    source = source_package_from_path(
-        path, document_id=doc_id, retrieved_at=retrieved_at
-    )
     tax_ref, offline_cfg, _pin = prepare_offline_taxonomy(
         taxonomy_identifier,
         taxonomy_zip=taxonomy_zip,

@@ -126,6 +126,20 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     extract_p.add_argument(
+        "--acquisition-record",
+        help=(
+            "Retrieval provenance JSON written by fetch. Defaults to the sidecar beside "
+            "a content-addressed stored package."
+        ),
+    )
+    extract_p.add_argument(
+        "--retrieved-at",
+        help=(
+            "Verified retrieval timestamp for a ZIP with no acquisition record. "
+            "Never defaults to extraction time."
+        ),
+    )
+    extract_p.add_argument(
         "--taxonomy-zip",
         help="Path to the taxonomy distribution ZIP (default: ~/.cache/edinet-replay/...).",
     )
@@ -165,6 +179,9 @@ def _download_and_store(
         dest_dir=store_dir,
         retrieved_at=download.retrieved_at,
     )
+    acquisition_path = package.write_acquisition_record(
+        stored, api_version=download.api_version, selection=selection
+    )
     return {
         "document_id": document_id,
         "package": {
@@ -179,6 +196,7 @@ def _download_and_store(
             "api_version": download.api_version,
         },
         "selection": dataclasses.asdict(selection),
+        "acquisition_record": str(acquisition_path),
     }
 
 
@@ -280,11 +298,13 @@ def _cmd_extract(args: argparse.Namespace) -> int:
         args.package,
         taxonomy_identifier=args.taxonomy,
         document_id=args.document_id,
+        acquisition_record_path=args.acquisition_record,
         taxonomy_zip=args.taxonomy_zip,
         pins_dir=args.pins_dir,
         registry_dir=args.registry_dir,
         cache_root=args.cache_root,
         output_dir=args.output_dir,
+        retrieved_at=args.retrieved_at,
     )
     payload = {
         "document_id": result.source_package.document_id,
