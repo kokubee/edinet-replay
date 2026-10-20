@@ -47,6 +47,8 @@ from .models import DocumentDownload, DocumentListResult, DocumentMetadata
 
 DEFAULT_API_BASE = "https://api.edinet-fsa.go.jp/api/v2"
 API_VERSION = "v2"
+DEFAULT_MAX_DOWNLOAD_BYTES = 512 * 1024**2  # 512 MiB
+_READ_CHUNK = 1024 * 1024
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DOC_ID_RE = re.compile(r"^[A-Za-z0-9]+$")
@@ -86,20 +88,95 @@ class HttpTransport(Protocol):
     ) -> HttpResponse: ...
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse every 3xx instead of forwarding the request (and its API key).
+
+    urllib's default redirect handler copies request headers other than
+    ``Content-*`` to the new URL, which would leak ``Ocp-Apim-Subscription-Key``
+    to whatever host a redirect names. Returning ``None`` makes urllib surface
+    the 3xx as an ``HTTPError``; no second request is made.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+def _header_value(headers: Mapping[str, str], name: str) -> str | None:
+    for header_name, value in headers.items():
+        if header_name.lower() == name.lower():
+            return value
+    return None
+
+
+def _content_length(headers: Mapping[str, str]) -> int | None:
+    value = _header_value(headers, "content-length")
+    if value is None:
+        return None
+    try:
+        length = int(value.strip())
+    except (TypeError, ValueError):
+        return None
+    return length if length >= 0 else None
+
+
+def _retry_after_seconds(headers: Mapping[str, str]) -> float | None:
+    """Return ``Retry-After`` in seconds when it is a delta-seconds value."""
+    value = _header_value(headers, "retry-after")
+    if value is None:
+        return None
+    try:
+        seconds = float(value.strip())
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, seconds)
+
+
 class UrllibTransport:
-    """Default stdlib transport."""
+    """Default stdlib transport with a hard response-size cap and no redirects."""
+
+    def __init__(self, *, max_body_bytes: int = DEFAULT_MAX_DOWNLOAD_BYTES) -> None:
+        if max_body_bytes <= 0:
+            raise ValueError("max_body_bytes must be positive")
+        self.max_body_bytes = max_body_bytes
+        self._opener = urllib.request.build_opener(_NoRedirectHandler())
+
+    def _read_limited(self, stream, headers: Mapping[str, str] | None = None) -> bytes:
+        declared = _content_length(headers or {})
+        if declared is not None and declared > self.max_body_bytes:
+            raise EdinetResponseError(
+                "EDINET response body exceeds the configured size limit"
+            )
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = stream.read(min(_READ_CHUNK, self.max_body_bytes - total + 1))
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > self.max_body_bytes:
+                raise EdinetResponseError(
+                    "EDINET response body exceeds the configured size limit"
+                )
+            chunks.append(chunk)
+        return b"".join(chunks)
 
     def request(
         self, url: str, *, headers: Mapping[str, str], timeout: float
     ) -> HttpResponse:
         req = urllib.request.Request(url, headers=dict(headers))
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as res:
+            with self._opener.open(req, timeout=timeout) as res:
                 return HttpResponse(
-                    status=res.status, headers=dict(res.headers), body=res.read()
+                    status=res.status,
+                    headers=dict(res.headers),
+                    body=self._read_limited(res, res.headers),
                 )
         except urllib.error.HTTPError as err:
-            body = err.read() if err.fp is not None else b""
+            body = (
+                self._read_limited(err, err.headers or {})
+                if err.fp is not None
+                else b""
+            )
             return HttpResponse(status=err.code, headers=dict(err.headers or {}), body=body)
 
 
@@ -144,14 +221,20 @@ class EdinetClient:
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_backoff: float = 1.0,
+        max_download_bytes: int = DEFAULT_MAX_DOWNLOAD_BYTES,
         transport: HttpTransport | None = None,
     ) -> None:
+        if max_download_bytes <= 0:
+            raise ValueError("max_download_bytes must be positive")
         self._api_key = api_key or os.environ.get("EDINET_API_KEY") or None
         self.api_base = api_base.rstrip("/")
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_backoff = retry_backoff
-        self._transport: HttpTransport = transport or UrllibTransport()
+        self.max_download_bytes = max_download_bytes
+        self._transport: HttpTransport = transport or UrllibTransport(
+            max_body_bytes=max_download_bytes
+        )
 
     # -- public API ------------------------------------------------------------
 
@@ -251,12 +334,28 @@ class EdinetClient:
                 raise EdinetTransportError(
                     f"EDINET request failed for {context}: {type(err).__name__}"
                 ) from None
+            declared = _content_length(response.headers)
+            if declared is not None and declared > self.max_download_bytes:
+                raise EdinetResponseError(
+                    f"EDINET response for {context} exceeds the "
+                    f"{self.max_download_bytes}-byte limit"
+                )
+            if len(response.body) > self.max_download_bytes:
+                raise EdinetResponseError(
+                    f"EDINET response for {context} exceeds the "
+                    f"{self.max_download_bytes}-byte limit"
+                )
             if response.status == 200:
                 return response
             last_status = response.status
             if response.status == 429 or response.status >= 500:
                 if attempt < attempts - 1:
-                    time.sleep(self.retry_backoff * (2**attempt))
+                    delay = self.retry_backoff * (2**attempt)
+                    if response.status == 429:
+                        retry_after = _retry_after_seconds(response.headers)
+                        if retry_after is not None:
+                            delay = max(delay, retry_after)
+                    time.sleep(delay)
                     continue
                 if response.status == 429:
                     raise EdinetRateLimitError(

@@ -11,49 +11,54 @@ from __future__ import annotations
 import io
 import json
 import os
-import stat
 import zipfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from .archive import (
+    CHUNK_SIZE,
+    DEFAULT_LIMITS,
+    ArchiveLimits,
+    iter_hashed_entries,
+    validated_entries,
+)
 from .exceptions import (
     ConfigurationError,
     PackageConflictError,
     PackageValidationError,
     UnsafeArchiveError,
 )
-from .hashing import content_sha256_v1, normalize_entry_path, sha256_bytes
+from .hashing import content_sha256_from_hashes, sha256_bytes
 from .models import AcquisitionRecord, PackageEntry, SelectionRecord, SourcePackage
 
-# Zip-bomb guardrails (defaults; override per call).
-DEFAULT_MAX_ENTRIES = 10_000
-DEFAULT_MAX_TOTAL_BYTES = 2 * 1024**3  # 2 GiB
-DEFAULT_MAX_FILE_BYTES = 512 * 1024**2  # 512 MiB
-DEFAULT_MAX_RATIO = 200  # uncompressed / compressed
+# Backwards-compatible aliases for the shared archive guardrails.
+DEFAULT_MAX_ENTRIES = DEFAULT_LIMITS.max_entries
+DEFAULT_MAX_TOTAL_BYTES = DEFAULT_LIMITS.max_total_bytes
+DEFAULT_MAX_FILE_BYTES = DEFAULT_LIMITS.max_file_bytes
+DEFAULT_MAX_RATIO = DEFAULT_LIMITS.max_ratio
 ACQUISITION_RECORD_SUFFIX = ".acquisition.json"
 
 
-def _file_entries(data: bytes) -> list[tuple[str, bytes, int]]:
+def inventory(
+    data: bytes, *, limits: ArchiveLimits = DEFAULT_LIMITS
+) -> tuple[str, list[PackageEntry]]:
+    """Return ``(content_sha256, entries)`` for ZIP ``data`` (files only).
+
+    Entry paths are validated and contents are hashed in a bounded stream, so
+    an over-limit or unsafe archive is rejected before its contents are
+    materialized.
+    """
     if not zipfile.is_zipfile(io.BytesIO(data)):
         raise PackageValidationError("not a ZIP archive")
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        return [
-            (info.filename, zf.read(info.filename), info.file_size)
-            for info in zf.infolist()
-            if not info.is_dir()
-        ]
-
-
-def inventory(data: bytes) -> tuple[str, list[PackageEntry]]:
-    """Return ``(content_sha256, entries)`` for ZIP ``data`` (files only)."""
-    raw_entries = _file_entries(data)
-    content_hash = content_sha256_v1([(name, body) for name, body, _ in raw_entries])
+        hashed = list(iter_hashed_entries(zf, limits=limits))
+    content_hash = content_sha256_from_hashes(
+        (entry.path, entry.sha256) for entry in hashed
+    )
     entries = [
-        PackageEntry(
-            path=normalize_entry_path(name), sha256=sha256_bytes(body), size_bytes=size
-        )
-        for name, body, size in raw_entries
+        PackageEntry(path=entry.path, sha256=entry.sha256, size_bytes=entry.size_bytes)
+        for entry in hashed
     ]
     entries.sort(key=lambda e: e.path.encode("utf-8"))
     return content_hash, entries
@@ -193,10 +198,6 @@ def load_acquisition_record(
     return record
 
 
-def _is_symlink(info: zipfile.ZipInfo) -> bool:
-    return stat.S_ISLNK(info.external_attr >> 16)
-
-
 def extract_safe(
     package_path: str | os.PathLike[str],
     dest_dir: str | os.PathLike[str],
@@ -208,60 +209,117 @@ def extract_safe(
 ) -> list[str]:
     """Extract ``package_path`` into ``dest_dir``, rejecting unsafe entries and
     enforcing zip-bomb limits. Returns the list of written file paths.
+
+    Path validation and declared-size checks run before any entry is written;
+    each entry is then streamed to disk under the same byte budget, so a lying
+    local header cannot bypass the limit.
     """
     dest = Path(dest_dir).resolve()
     dest.mkdir(parents=True, exist_ok=True)
+    limits = ArchiveLimits(
+        max_entries=max_entries,
+        max_total_bytes=max_total_bytes,
+        max_file_bytes=max_file_bytes,
+        max_ratio=max_ratio,
+    )
     written: list[str] = []
-    seen: set[str] = set()
-    total = 0
+    seen_targets: set[Path] = set()
     with zipfile.ZipFile(package_path) as zf:
-        infos = [i for i in zf.infolist() if not i.is_dir()]
-        if len(infos) > max_entries:
-            raise UnsafeArchiveError(f"too many entries: {len(infos)} > {max_entries}")
-        for info in infos:
-            name = info.filename
-            if "\x00" in name:
-                raise UnsafeArchiveError(f"NUL in path: {name!r}")
-            if name.startswith(("/", "\\")) or (len(name) > 1 and name[1] == ":"):
-                raise UnsafeArchiveError(f"absolute path: {name!r}")
-            if _is_symlink(info):
-                raise UnsafeArchiveError(f"symlink entry: {name!r}")
-            try:
-                norm = normalize_entry_path(name)
-            except ValueError as exc:
-                raise UnsafeArchiveError(str(exc)) from exc
-            if norm in seen:
-                raise UnsafeArchiveError(f"duplicate path: {norm!r}")
-            seen.add(norm)
-            if info.file_size > max_file_bytes:
-                raise UnsafeArchiveError(f"file too large: {norm} ({info.file_size})")
-            if info.compress_size and info.file_size / info.compress_size > max_ratio:
-                raise UnsafeArchiveError(f"compression ratio too high: {norm}")
-            total += info.file_size
-            if total > max_total_bytes:
-                raise UnsafeArchiveError("total extracted size exceeds limit")
+        for info, norm in validated_entries(zf, limits=limits):
             target = (dest / norm).resolve()
             if target != dest and not str(target).startswith(str(dest) + os.sep):
                 raise UnsafeArchiveError(f"path escapes destination: {norm!r}")
+            if target in seen_targets:
+                raise UnsafeArchiveError(f"duplicate target path: {norm!r}")
+            seen_targets.add(target)
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(zf.read(info.filename))
+            try:
+                with zf.open(info) as src, target.open("wb") as dst:
+                    size = 0
+                    while chunk := src.read(CHUNK_SIZE):
+                        size += len(chunk)
+                        if size > max_file_bytes:
+                            raise UnsafeArchiveError(
+                                f"file too large: {norm} (>{max_file_bytes})"
+                            )
+                        dst.write(chunk)
+            except (RuntimeError, NotImplementedError, zipfile.BadZipFile, OSError) as exc:
+                target.unlink(missing_ok=True)
+                raise PackageValidationError(
+                    f"unreadable ZIP entry {norm!r}: {type(exc).__name__}"
+                ) from exc
+            except UnsafeArchiveError:
+                target.unlink(missing_ok=True)
+                raise
             written.append(str(target))
     return written
 
 
-def find_public_doc(package_path: str | os.PathLike[str]) -> list[str]:
+def find_public_doc(
+    package_path: str | os.PathLike[str], *, limits: ArchiveLimits = DEFAULT_LIMITS
+) -> list[str]:
     """Return sorted XBRL/iXBRL entry paths under ``XBRL/PublicDoc/``."""
     with zipfile.ZipFile(package_path) as zf:
-        return sorted(
-            normalize_entry_path(i.filename)
-            for i in zf.infolist()
-            if not i.is_dir()
-            and normalize_entry_path(i.filename).startswith("XBRL/PublicDoc/")
-        )
+        entries = validated_entries(zf, limits=limits)
+    return sorted(
+        norm for _info, norm in entries if norm.startswith("XBRL/PublicDoc/")
+    )
 
 
 _MANIFEST_NS = "{http://disclosure.edinet-fsa.go.jp/2013/manifest}"
 _PUBLIC_DOC_PREFIX = "XBRL/PublicDoc/"
+_MANIFEST_MAX_BYTES = 10 * 1024**2
+_DOCTYPE_MARKERS = (
+    b"<!DOCTYPE",
+    "<!DOCTYPE".encode("utf-16-le"),
+    "<!DOCTYPE".encode("utf-16-be"),
+    "<!DOCTYPE".encode("utf-32-le"),
+    "<!DOCTYPE".encode("utf-32-be"),
+)
+
+
+def _load_manifest(manifest_path: Path):
+    """Parse ``manifest_PublicDoc.xml`` after rejecting DTDs and oversized files.
+
+    The manifest is untrusted package content. Python's ElementTree does not
+    resolve external entities, but a DTD can still define internal entities, so
+    any DOCTYPE is rejected outright rather than relying on parser defaults.
+    """
+    import xml.etree.ElementTree as ET
+
+    if manifest_path.stat().st_size > _MANIFEST_MAX_BYTES:
+        raise PackageValidationError(
+            f"manifest_PublicDoc.xml is too large (>{_MANIFEST_MAX_BYTES} bytes)"
+        )
+    raw = manifest_path.read_bytes()
+    if any(marker in raw for marker in _DOCTYPE_MARKERS):
+        raise PackageValidationError(
+            "manifest_PublicDoc.xml must not contain a DOCTYPE declaration"
+        )
+    try:
+        return ET.fromstring(raw)
+    except ET.ParseError as exc:
+        raise PackageValidationError(
+            f"unreadable manifest_PublicDoc.xml: {exc}"
+        ) from exc
+
+
+def _safe_public_basename(preferred: str) -> str:
+    """Validate that ``preferredFilename`` is a bare basename inside PublicDoc."""
+    if (
+        not preferred
+        or preferred in {".", ".."}
+        or "\x00" in preferred
+        or any(ord(ch) < 32 for ch in preferred)
+        or "/" in preferred
+        or "\\" in preferred
+        or ":" in preferred
+        or Path(preferred).name != preferred
+    ):
+        raise PackageValidationError(
+            f"unsafe manifest preferredFilename: {preferred!r}"
+        )
+    return preferred
 
 
 def infer_document_id(package_path: str | os.PathLike[str]) -> str | None:
@@ -313,8 +371,6 @@ def select_preferred_xbrl(extracted_dir: str | os.PathLike[str]) -> tuple[str, d
     ``extraction_source`` is suitable for an extraction-manifest
     ``extraction_source`` object (``kind`` = ``xbrl-instance``).
     """
-    import xml.etree.ElementTree as ET
-
     root = Path(extracted_dir)
     public = root / "XBRL" / "PublicDoc"
     if not public.is_dir():
@@ -324,18 +380,18 @@ def select_preferred_xbrl(extracted_dir: str | os.PathLike[str]) -> tuple[str, d
 
     manifest_path = public / "manifest_PublicDoc.xml"
     if manifest_path.is_file():
-        try:
-            tree = ET.parse(manifest_path)
-        except ET.ParseError as exc:
-            raise PackageValidationError(
-                f"unreadable manifest_PublicDoc.xml: {exc}"
-            ) from exc
-        for inst in tree.getroot().iter(_MANIFEST_NS + "instance"):
+        manifest_root = _load_manifest(manifest_path)
+        public_resolved = public.resolve()
+        for inst in manifest_root.iter(_MANIFEST_NS + "instance"):
             preferred = (inst.get("preferredFilename") or "").strip()
             if not preferred:
                 continue
-            # preferredFilename is a bare basename inside PublicDoc.
-            candidate = public / preferred
+            preferred = _safe_public_basename(preferred)
+            candidate = (public / preferred).resolve()
+            if candidate.parent != public_resolved:
+                raise PackageValidationError(
+                    f"manifest preferredFilename escapes XBRL/PublicDoc/: {preferred!r}"
+                )
             if not candidate.is_file():
                 raise PackageValidationError(
                     f"manifest preferredFilename {preferred!r} not found under "

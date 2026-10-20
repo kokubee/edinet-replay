@@ -14,7 +14,12 @@ from pathlib import Path
 
 import pytest
 
-from edinet_replay.client import DEFAULT_API_BASE, EdinetClient, HttpResponse
+from edinet_replay.client import (
+    DEFAULT_API_BASE,
+    EdinetClient,
+    HttpResponse,
+    UrllibTransport,
+)
 from edinet_replay.exceptions import (
     ConfigurationError,
     DocumentNotFoundError,
@@ -293,3 +298,122 @@ def test_api_key_never_appears_in_exception_messages():
         message = str(excinfo.value)
         assert TEST_KEY not in message
         assert "https://" not in message
+
+
+# --- response size limits ---------------------------------------------------------
+
+
+def test_download_body_over_limit_is_response_error():
+    client, _ = _client(
+        [HttpResponse(200, ZIP_HEADERS, b"PK" + b"0" * 4096)],
+        max_download_bytes=1024,
+    )
+    with pytest.raises(EdinetResponseError, match="limit"):
+        client.download_document("S100W1NC")
+
+
+def test_content_length_over_limit_is_response_error():
+    headers = dict(ZIP_HEADERS)
+    headers["Content-Length"] = str(10 * 1024**2)
+    client, _ = _client([HttpResponse(200, headers, b"PK")], max_download_bytes=1024)
+    with pytest.raises(EdinetResponseError, match="limit"):
+        client.download_document("S100W1NC")
+
+
+# --- Retry-After ------------------------------------------------------------------
+
+
+def test_retry_after_is_honoured(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("edinet_replay.client.time.sleep", sleeps.append)
+    client, transport = _client(
+        [
+            HttpResponse(429, {"Retry-After": "2"}, b""),
+            HttpResponse(200, JSON_HEADERS, _fixture_bytes("documents_success.json")),
+        ],
+        retry_backoff=0.0,
+    )
+    assert len(client.list_documents("2025-06-27").documents) == 2
+    assert len(transport.requests) == 2
+    assert sleeps and sleeps[0] >= 2.0
+
+
+# --- redirects --------------------------------------------------------------------
+
+
+def test_redirect_is_not_followed_and_key_is_not_forwarded():
+    import http.server
+    import threading
+
+    seen: list[tuple[str, dict[str, str]]] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            seen.append((self.path, dict(self.headers)))
+            if self.path.startswith("/documents.json"):
+                self.send_response(302)
+                self.send_header(
+                    "Location",
+                    f"http://localhost:{self.server.server_address[1]}/leak",
+                )
+                self.end_headers()
+            else:
+                body = b'{"metadata": {"status": "200"}, "results": []}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+        def log_message(self, *args):  # noqa: ANN002
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        client = EdinetClient(
+            api_key=TEST_KEY,
+            api_base=f"http://127.0.0.1:{server.server_address[1]}",
+            max_retries=0,
+        )
+        with pytest.raises(EdinetTransportError, match="HTTP 302"):
+            client.list_documents("2025-06-27")
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+    assert len(seen) == 1
+    assert seen[0][1].get("Ocp-Apim-Subscription-Key") == TEST_KEY
+
+
+def test_urllib_transport_caps_body_without_content_length():
+    import http.server
+    import threading
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.end_headers()
+            self.wfile.write(b"0" * 4096)
+
+        def log_message(self, *args):  # noqa: ANN002
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        transport = UrllibTransport(max_body_bytes=1024)
+        with pytest.raises(EdinetResponseError, match="size limit"):
+            transport.request(
+                f"http://127.0.0.1:{server.server_address[1]}/blob",
+                headers={},
+                timeout=5,
+            )
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()

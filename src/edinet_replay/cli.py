@@ -33,9 +33,10 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__, catalog, extract, package, schemas, selectors
+from .archive import iter_hashed_entries
 from .client import EdinetClient
 from .exceptions import EdinetReplayError
-from .hashing import content_sha256_v1, sha256_bytes
+from .hashing import content_sha256_from_hashes, sha256_file
 from .models import DocumentListResult, SelectionRecord
 
 _VALIDATE_SCHEMAS = {
@@ -278,18 +279,17 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 
 def _cmd_inspect(args: argparse.Namespace) -> int:
     path = Path(args.package)
-    raw = path.read_bytes()
     with zipfile.ZipFile(path) as zf:
-        entries = [
-            (info.filename, info.file_size) for info in zf.infolist() if not info.is_dir()
-        ]
-        files = [(name, zf.read(name)) for name, _ in entries]
+        entries = list(iter_hashed_entries(zf))
+    content_sha256 = content_sha256_from_hashes(
+        (entry.path, entry.sha256) for entry in entries
+    )
     print(f"package:        {path}")
-    print(f"raw_sha256:     {sha256_bytes(raw)}")
-    print(f"content_sha256: {content_sha256_v1(files)}")
+    print(f"raw_sha256:     {sha256_file(path)}")
+    print(f"content_sha256: {content_sha256}")
     print(f"entries:        {len(entries)}")
-    for name, size in entries:
-        print(f"  {size:>10}  {name}")
+    for entry in entries:
+        print(f"  {entry.size_bytes:>10}  {entry.path}")
     return 0
 
 

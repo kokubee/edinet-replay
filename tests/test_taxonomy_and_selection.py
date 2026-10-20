@@ -6,7 +6,12 @@ from datetime import datetime
 import pytest
 
 from edinet_replay import catalog, selectors, taxonomy
-from edinet_replay.exceptions import NoCandidatesError, TaxonomyConflictError
+from edinet_replay.exceptions import (
+    NoCandidatesError,
+    TaxonomyConflictError,
+    TaxonomyResolutionError,
+)
+from edinet_replay.hashing import sha256_bytes
 from edinet_replay.models import DocumentMetadata
 
 
@@ -131,3 +136,37 @@ def test_latest_original_no_candidates_raises():
     only_amendments = [DocumentMetadata("S100AMD1", is_amendment=True)]
     with pytest.raises(NoCandidatesError):
         selectors.latest_original_filing(only_amendments)
+
+
+def test_verify_pinned_taxonomy_zip_accepts_matching_pin(tmp_path):
+    data = _zip([("core.xsd", b"<schema/>")])
+    pkg = _write(tmp_path, "tax.zip", data)
+    content_hash, _ = taxonomy.inventory(data)
+    pin = {
+        "raw_sha256": sha256_bytes(data),
+        "content_sha256": content_hash,
+    }
+    taxonomy.verify_pinned_taxonomy_zip(pkg, pin)
+
+
+def test_verify_pinned_taxonomy_zip_rejects_changed_raw_pin(tmp_path):
+    data = _zip([("core.xsd", b"<schema/>")])
+    pkg = _write(tmp_path, "tax.zip", data)
+    content_hash, _ = taxonomy.inventory(data)
+    pin = {
+        "raw_sha256": "0" * 64,
+        "content_sha256": content_hash,
+    }
+    with pytest.raises(TaxonomyResolutionError, match="raw_sha256"):
+        taxonomy.verify_pinned_taxonomy_zip(pkg, pin)
+
+
+def test_verify_pinned_taxonomy_zip_rejects_changed_content_pin(tmp_path):
+    data = _zip([("core.xsd", b"<schema/>")])
+    pkg = _write(tmp_path, "tax.zip", data)
+    pin = {
+        "raw_sha256": sha256_bytes(data),
+        "content_sha256": "0" * 64,
+    }
+    with pytest.raises(TaxonomyResolutionError, match="content_sha256"):
+        taxonomy.verify_pinned_taxonomy_zip(pkg, pin)

@@ -55,6 +55,7 @@ MANIFEST_FILENAME = "extraction-manifest.json"
 
 _XBRLI = "http://www.xbrl.org/2003/instance"
 
+_XML_INPUT_SUFFIXES = frozenset({".xbrl", ".xml", ".xsd", ".xlink"})
 _TAXO_URL = re.compile(r"https?://[^\s'\"<>]+")
 _MISSING_HINTS = ("offline", "unable to", "not loadable", "cannot", "no such", "failed to load")
 
@@ -88,6 +89,46 @@ def load_offline(entry_point: str, config: OfflineArelleConfig):
         if any(h in msg.lower() for h in _MISSING_HINTS):
             missing.update(_TAXO_URL.findall(msg))
     return cntlr, model, sorted(missing)
+
+
+def reject_unsafe_xml(paths: list[Path]) -> None:
+    """Reject XML inputs that declare a DTD before Arelle parses them.
+
+    Package XML is untrusted. lxml is configured with ``resolve_entities=False``,
+    ``load_dtd=False``, and ``no_network=True``; on top of that, any DOCTYPE is
+    refused outright so external-entity references and entity-expansion tricks
+    never reach Arelle. Requires the ``[xbrl]`` extra (lxml).
+    """
+    from lxml import etree
+
+    for path in paths:
+        parser = etree.XMLParser(
+            resolve_entities=False,
+            no_network=True,
+            load_dtd=False,
+            # DTDs are rejected below, so entity expansion is impossible; keep
+            # large text nodes (some filings embed long text blocks) parseable.
+            huge_tree=True,
+        )
+        try:
+            tree = etree.parse(str(path), parser)
+        except (etree.XMLSyntaxError, OSError) as exc:
+            raise ExtractionError(f"unreadable XML input {path.name}: {exc}") from exc
+        if tree.docinfo.doctype or tree.docinfo.internalDTD is not None:
+            raise ExtractionError(
+                f"DOCTYPE/DTD is not allowed in XBRL input: {path.name}"
+            )
+
+
+def reject_unsafe_package_xml(root: str | os.PathLike[str]) -> None:
+    """Apply :func:`reject_unsafe_xml` to every XML-like file under ``root``."""
+    base = Path(root)
+    paths = sorted(
+        path
+        for path in base.rglob("*")
+        if path.is_file() and path.suffix.lower() in _XML_INPUT_SUFFIXES
+    )
+    reject_unsafe_xml(paths)
 
 
 # --- projection helpers ------------------------------------------------------
@@ -521,6 +562,9 @@ def extract_package(
         if extracted_root.exists():
             shutil.rmtree(extracted_root)
         extract_safe(path, extracted_root)
+        # Reject DTDs/external entities in every package XML file before Arelle
+        # (or the manifest parser) touches them.
+        reject_unsafe_package_xml(extracted_root)
         rel_path, extraction_source = select_preferred_xbrl(extracted_root)
         entry = extracted_root / rel_path
         if not entry.is_file():

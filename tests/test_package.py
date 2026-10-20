@@ -10,6 +10,7 @@ from edinet_replay.exceptions import (
     PackageValidationError,
     UnsafeArchiveError,
 )
+from edinet_replay.hashing import zip_content_sha256_v1
 
 GOOD = [
     ("XBRL/PublicDoc/a.xbrl", b"<xbrl>a</xbrl>"),
@@ -162,3 +163,94 @@ def test_select_preferred_xbrl_rejects_ambiguous(tmp_path):
     (public / "b.xbrl").write_text("<xbrl/>", encoding="utf-8")
     with pytest.raises(PackageValidationError, match="multiple"):
         package.select_preferred_xbrl(tmp_path)
+
+
+# --- bounded archive access --------------------------------------------------
+
+BOMB = [("bomb.bin", b"\x00" * (8 * 1024 * 1024))]
+
+
+def test_inventory_rejects_high_compression_zip_bomb():
+    data = _zip(BOMB)
+    assert len(data) < 1024 * 1024  # compressed is tiny; declared size is 8 MiB
+    with pytest.raises(UnsafeArchiveError, match="compression ratio"):
+        package.inventory(data)
+
+
+def test_zip_content_hash_rejects_high_compression_zip_bomb(tmp_path):
+    zpath = tmp_path / "bomb.zip"
+    zpath.write_bytes(_zip(BOMB))
+    with pytest.raises(UnsafeArchiveError, match="compression ratio"):
+        zip_content_sha256_v1(zpath)
+
+
+def test_cli_inspect_rejects_zip_bomb_without_reading_it(tmp_path, capsys):
+    from edinet_replay import cli
+
+    zpath = tmp_path / "bomb.zip"
+    zpath.write_bytes(_zip(BOMB))
+    assert cli.main(["inspect", str(zpath)]) == 1
+    err = capsys.readouterr().err
+    assert "compression ratio" in err
+
+
+def test_extract_safe_rejects_zip_bomb_before_writing(tmp_path):
+    zpath = tmp_path / "bomb.zip"
+    zpath.write_bytes(_zip(BOMB))
+    out = tmp_path / "out"
+    with pytest.raises(UnsafeArchiveError, match="compression ratio"):
+        package.extract_safe(zpath, out)
+    if out.exists():
+        assert list(out.rglob("*")) == []
+
+
+# --- manifest preferredFilename ---------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "preferred",
+    ["../evil.xbrl", "/etc/evil.xbrl", "sub\\evil.xbrl", "sub/evil.xbrl", "C:evil.xbrl"],
+)
+def test_preferred_filename_traversal_rejected(tmp_path, preferred):
+    public = tmp_path / "XBRL" / "PublicDoc"
+    public.mkdir(parents=True)
+    (public / "chosen.xbrl").write_text("<xbrl/>", encoding="utf-8")
+    (public / "manifest_PublicDoc.xml").write_text(
+        f"""<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns="http://disclosure.edinet-fsa.go.jp/2013/manifest">
+  <list>
+    <instance preferredFilename="{preferred}"/>
+  </list>
+</manifest>
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(PackageValidationError, match="preferredFilename"):
+        package.select_preferred_xbrl(tmp_path)
+
+
+def test_manifest_with_doctype_is_rejected(tmp_path):
+    public = tmp_path / "XBRL" / "PublicDoc"
+    public.mkdir(parents=True)
+    (public / "manifest_PublicDoc.xml").write_text(
+        """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE manifest [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+<manifest xmlns="http://disclosure.edinet-fsa.go.jp/2013/manifest">
+  <list><instance preferredFilename="chosen.xbrl"/></list>
+</manifest>
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(PackageValidationError, match="DOCTYPE"):
+        package.select_preferred_xbrl(tmp_path)
+
+
+def test_cli_inspect_reports_hashes_for_a_normal_package(tmp_path, capsys):
+    from edinet_replay import cli
+
+    zpath = tmp_path / "ok.zip"
+    zpath.write_bytes(_zip(GOOD))
+    assert cli.main(["inspect", str(zpath)]) == 0
+    out = capsys.readouterr().out
+    assert "content_sha256:" in out
+    assert "XBRL/PublicDoc/a.xbrl" in out

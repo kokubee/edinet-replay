@@ -69,6 +69,34 @@ def load_pin_record(
     )
 
 
+def verify_pinned_taxonomy_zip(
+    zip_path: str | os.PathLike[str], pin: dict
+) -> None:
+    """Verify a downloaded taxonomy ZIP against a pin's raw and content hashes.
+
+    Raises :class:`TaxonomyResolutionError` on any mismatch. Call this
+    immediately after downloading a taxonomy (CI does), so a tampered archive
+    is rejected before it is registered or extracted.
+    """
+    expected_raw = pin.get("raw_sha256")
+    expected_content = pin.get("content_sha256")
+    if not isinstance(expected_raw, str) or not isinstance(expected_content, str):
+        raise TaxonomyResolutionError("pin record lacks taxonomy hashes")
+    raw = Path(zip_path).read_bytes()
+    raw_hash = sha256_bytes(raw)
+    if raw_hash != expected_raw:
+        raise TaxonomyResolutionError(
+            f"taxonomy zip raw_sha256 mismatch: file={raw_hash[:12]}… "
+            f"pin={expected_raw[:12]}…"
+        )
+    content_hash, _ = inventory(raw)
+    if content_hash != expected_content:
+        raise TaxonomyResolutionError(
+            f"taxonomy zip content_sha256 mismatch: file={content_hash[:12]}… "
+            f"pin={expected_content[:12]}…"
+        )
+
+
 def prepare_offline_taxonomy(
     identifier: str,
     *,
@@ -88,19 +116,7 @@ def prepare_offline_taxonomy(
             f"taxonomy zip not found at {zip_path}; download from {source} "
             f"into that path, or pass taxonomy_zip="
         )
-    raw = zip_path.read_bytes()
-    raw_hash = sha256_bytes(raw)
-    if raw_hash != pin["raw_sha256"]:
-        raise TaxonomyResolutionError(
-            f"taxonomy zip raw_sha256 mismatch for {identifier}: "
-            f"file={raw_hash[:12]}… pin={pin['raw_sha256'][:12]}…"
-        )
-    content_hash, _ = inventory(raw)
-    if content_hash != pin["content_sha256"]:
-        raise TaxonomyResolutionError(
-            f"taxonomy zip content_sha256 mismatch for {identifier}: "
-            f"file={content_hash[:12]}… pin={pin['content_sha256'][:12]}…"
-        )
+    verify_pinned_taxonomy_zip(zip_path, pin)
 
     reg = Path(registry_dir) if registry_dir is not None else DEFAULT_CACHE_HOME / "registry"
     cache = (
