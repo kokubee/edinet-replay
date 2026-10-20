@@ -13,6 +13,24 @@ All notable changes to this project are documented here. The format is based on
   explicit selection record; `extract` verifies and carries that provenance
   into the manifest instead of substituting extraction time for retrieval time.
 
+### Security
+
+- ZIP access is now bounded and streaming (`edinet_replay.archive`): entry
+  count, declared size, compression ratio, and actually decompressed bytes are
+  checked before/while hashing or extracting, so `inventory`, `inspect`,
+  `zip_content_sha256_v1`, and `store` no longer decompress a zip bomb.
+- `manifest_PublicDoc.xml` `preferredFilename` must be a bare basename inside
+  `XBRL/PublicDoc/`; traversal, drive, absolute, and separator forms are
+  rejected. Manifest DTDs are refused.
+- EDINET responses are capped (512 MiB default) and read in chunks; redirects
+  are never followed, so `Ocp-Apim-Subscription-Key` cannot be forwarded to
+  another host. `Retry-After` is honored on HTTP 429.
+- Package XML is scanned for DOCTYPE/DTD before Arelle runs, blocking XXE and
+  entity-expansion input.
+- CI pins GitHub Actions to commit SHAs, declares `permissions: contents: read`,
+  installs from a hash-verified lockfile, and runs `zizmor` and `pip-audit`.
+
+
 ## [0.1.0-beta.1] — 2026-08-02
 
 First **beta**. The β completion bar is met for resolved XBRL: an explicit

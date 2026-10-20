@@ -7,6 +7,9 @@ on:
     - cron: "17 3 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   beta-corpus:
     # Keep public PR CI data-free. Enable this protected-branch job only after
@@ -17,12 +20,16 @@ jobs:
       EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
       EDINET_REPLAY_LIVE_API_TESTS: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - run: python -m pip install -U pip
-      - run: pip install -e ".[dev,xbrl]"
+      - name: Install hashed CI lock
+        run: |
+          python -m pip install --require-hashes -r requirements-ci.lock
+          python -m pip install --no-deps --no-build-isolation -e .
       - name: Download pinned taxonomies and beta corpus source packages
         run: |
           set -euo pipefail
@@ -32,13 +39,17 @@ jobs:
           import pathlib
           import urllib.request
 
+          from edinet_replay.taxonomy import verify_pinned_taxonomy_zip
+
           root = pathlib.Path.cwd()
           cache = pathlib.Path.home() / ".cache/edinet-replay/taxonomies"
-          for pin_path in (root / "taxonomies").glob("*.json"):
+          for pin_path in sorted((root / "taxonomies").glob("*.json")):
               pin = json.loads(pin_path.read_text(encoding="utf-8"))
               target = cache / pin["identifier"] / "1c_Taxonomy.zip"
               target.parent.mkdir(parents=True, exist_ok=True)
               urllib.request.urlretrieve(pin["source_url"], target)
+              # Verify immediately, before the archive is registered or extracted.
+              verify_pinned_taxonomy_zip(target, pin)
           PY
           filings="$RUNNER_TEMP/edinet-filings"
           mkdir -p "$filings"

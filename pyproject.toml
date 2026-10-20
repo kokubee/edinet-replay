@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -28,6 +28,13 @@ dependencies = [
 # transitive dependency.
 xbrl = ["arelle-release>=2.36", "lxml>=4.9"]
 dev = ["pytest>=8", "ruff>=0.6"]
+ci = [
+  "build>=1.2",
+  "editables>=0.5",
+  "hatchling>=1.27",
+  "pip-audit>=2.7",
+  "zizmor>=1.31",
+]
 
 [project.urls]
 Homepage = "https://github.com/kokubee/edinet-replay"

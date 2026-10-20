@@ -10,6 +10,7 @@ python -m venv .venv
 . .venv/bin/activate
 pip install -e ".[dev]"        # schema/unit tests + ruff + pytest
 pip install -e ".[dev,xbrl]"   # also install Arelle for the extraction tests
+pip install -e ".[dev,xbrl,ci]" # CI tools: hashed lock, zizmor, pip-audit, build
 ```
 
 Run the checks:
